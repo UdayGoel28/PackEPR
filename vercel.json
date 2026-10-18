@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/app",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/demo",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "/llms.txt"
+    }
+  ]
+}

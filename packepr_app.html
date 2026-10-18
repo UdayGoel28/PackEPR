@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PackEPR — EU Packaging Waste Compliance &amp; Shopify Tare Calculator</title>
+  <meta name="description" content="Automate EU PPWR Regulation 2025/40 &amp; Germany VerpackDG compliance for Shopify stores. Calculate empty carton tare weight and generate 1-click ZSVR LUCID XML and France Citeo CSV declarations." />
+  
+  <!-- Fonts: Inter for UI body, Plus Jakarta Sans for headings, JetBrains Mono for accounting numbers -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS & Chart.js -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --polaris-bg: #F6F6F7;
+      --polaris-card: #FFFFFF;
+      --polaris-border: #E1E3E5;
+      --polaris-text: #202223;
+      --polaris-subdued: #6D7175;
+      --polaris-green: #008060;
+      --polaris-green-hover: #006E52;
+      --polaris-blue: #005BD3;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--polaris-bg);
+      color: var(--polaris-text);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .font-heading {
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    .tabular-nums, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Polaris Design Tokens */
+    .polaris-card {
+      background-color: var(--polaris-card);
+      border: 1px solid var(--polaris-border);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .polaris-card-hover {
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .polaris-card-hover:hover {
+      border-color: #BABFC3;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .polaris-btn-primary {
+      background-color: var(--polaris-green);
+      color: #FFFFFF;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--polaris-green-hover);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      transition: background-color 0.15s ease;
+      cursor: pointer;
+    }
+    .polaris-btn-primary:hover {
+      background-color: var(--polaris-green-hover);
+    }
+
+    .polaris-btn-secondary {
+      background-color: #FFFFFF;
+      color: var(--polaris-text);
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid #BABFC3;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+    .polaris-btn-secondary:hover {
+      background-color: #F6F6F7;
+      border-color: #8C9196;
+    }
+
+    .polaris-input {
+      background-color: #FFFFFF;
+      border: 1px solid #BABFC3;
+      border-radius: 6px;
+      color: var(--polaris-text);
+      transition: outline 0.1s ease, border-color 0.1s ease;
+    }
+    .polaris-input:focus {
+      outline: 2px solid var(--polaris-blue);
+      outline-offset: 1px;
+      border-color: var(--polaris-blue);
+    }
+
+    .badge-green {
+      background-color: #E3F1DF;
+      color: #1A512E;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      line-height: 1.2;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #008060;
+    }
+
+    .badge-neutral {
+      background-color: #F1F2F3;
+      color: #4A4D50;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .code-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Subtle Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-[#202223] text-white px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2.5 text-xs sm:text-sm font-medium transition-all duration-200">
+    <span class="w-2 h-2 rounded-full bg-[#008060] shrink-0"></span>
+    <span id="toast-msg">Saved</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 1. STICKY TOP HEADER                        -->
+  <!-- ========================================== -->
+  <header class="bg-white border-b border-[#E1E3E5] sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
+      
+      <!-- Brand Logo & Connected Store Pill -->
+      <div class="flex items-center gap-3">
+        <a id="nav-logo-home" href="/" class="flex items-center gap-2 text-[#202223] hover:opacity-95 transition">
+          <div class="w-8 h-8 rounded-md bg-[#008060] flex items-center justify-center text-white shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <span class="font-bold text-base tracking-tight">Pack<span class="text-[#008060]">EPR</span></span>
+        </a>
+        <span class="text-xs text-[#6D7175]">/</span>
+        <span class="hidden sm:inline-flex text-[11px] font-semibold bg-[#F1F2F3] text-[#6D7175] px-2 py-0.5 rounded uppercase tracking-wider">
+          Shopify App
+        </span>
+
+        <!-- Connected Store Pill -->
+        <div id="connected-store-pill" class="flex items-center gap-1.5 bg-[#FAFBFB] border border-[#E1E3E5] px-2.5 py-1 rounded-md text-xs">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#008060] animate-pulse"></span>
+          <span id="connected-store-label" class="font-mono text-[#4A4D50] text-[11px] truncate max-w-[150px] sm:max-w-[210px]">
+            nordic-atelier-de.myshopify.com
+          </span>
+          <span class="hidden lg:inline-flex items-center text-[10px] text-[#1A512E] bg-[#E3F1DF] font-medium px-1.5 py-0.2 rounded ml-1">
+            VerpackDG Active
+          </span>
+        </div>
+      </div>
+
+      <!-- Landing Navigation Links (Hidden in App Mode) -->
+      <nav id="landing-nav-links" class="hidden md:flex items-center gap-6 text-xs sm:text-sm font-medium text-[#4A4D50]">
+        <a href="#section-features" class="hover:text-[#202223] transition-colors" data-i18n="nav_features">Features</a>
+        <a href="#section-how-it-works" class="hover:text-[#202223] transition-colors" data-i18n="nav_how">How it Works</a>
+        <a href="#section-regulations" class="hover:text-[#202223] transition-colors flex items-center gap-1.5">
+          <span data-i18n="nav_regulations">EU Regulations</span>
+          <span class="text-[10px] bg-[#E3F1DF] text-[#1A512E] font-semibold px-1.5 py-0.2 rounded">PPWR</span>
+        </a>
+        <a href="#section-pricing" class="hover:text-[#202223] transition-colors" data-i18n="nav_pricing">Pricing</a>
+      </nav>
+
+      <!-- Action Buttons & Language Switcher -->
+      <div class="flex items-center gap-2 sm:gap-2.5">
+        
+        <!-- DE | EN Language Switcher -->
+        <button id="lang-toggle-btn" class="polaris-btn-secondary px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1">
+          <span id="lang-flag">🇩🇪</span>
+          <span id="lang-code">DE</span>
+        </button>
+
+        <!-- Mode Toggle Button (Landing <-> App) -->
+        <button id="btn-toggle-mode" class="polaris-btn-secondary px-3 py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-[#008060]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+          <span id="toggle-mode-text" data-i18n="btn_open_calculator">Open Live App Calculator</span>
+        </button>
+
+        <!-- Sign In Button -->
+        <button id="btn-nav-signin" class="hidden sm:inline-flex text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] px-2 py-1.5" data-i18n="btn_signin">
+          Sign In
+        </button>
+
+        <!-- Install on Shopify Button -->
+        <button id="btn-nav-install" class="polaris-btn-primary px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-sm">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.5 7.5L12 3 4.5 7.5v9L12 21l7.5-4.5v-9zM12 5.25l5.5 3.3L12 11.85 6.5 8.55 12 5.25z"/>
+          </svg>
+          <span data-i18n="btn_install_shopify">Install on Shopify</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 2. MODE 1: MARKETING LANDING PAGE          -->
+  <!-- ========================================== -->
+  <div id="landing-page-wrapper" class="space-y-0">
+
+    <!-- HERO SECTION -->
+    <section class="pt-10 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-[#FAFBFB]">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+        
+        <!-- Left Column: Copy & CTAs -->
+        <div class="lg:col-span-7 space-y-5 sm:space-y-6">
+          <div>
+            <span class="badge-green">
+              <span class="badge-dot"></span>
+              <span data-i18n="hero_badge">✓ EU PPWR &amp; VerpackDG Compliant — Since Aug 12, 2026</span>
+            </span>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl lg:text-[40px] font-bold text-[#202223] leading-[1.18] tracking-tight" data-i18n="hero_title">
+            Your Shopify Store Ships Into Germany. Are You Filing The Right Packaging Weights?
+          </h1>
+
+          <p class="text-base sm:text-lg text-[#6D7175] leading-relaxed max-w-2xl" data-i18n="hero_sub">
+            Shopify tracks product weight for courier shipping rates — not the empty cardboard box, poly mailer, or bubble wrap that the EU counts for <strong class="text-[#202223] font-semibold">LUCID (Germany)</strong> and <strong class="text-[#202223] font-semibold">Citeo (France)</strong> compliance. PackEPR fixes this gap automatically.
+          </p>
+
+          <!-- CTA Buttons -->
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button id="btn-hero-try-shopify" class="polaris-btn-primary px-4 py-2.5 text-sm sm:text-base flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              <span data-i18n="btn_hero_try">+ Try Free on Shopify</span>
+            </button>
+            <button id="btn-hero-live-demo" class="polaris-btn-secondary px-4 py-2.5 text-sm sm:text-base flex items-center gap-2">
+              <svg class="w-4 h-4 text-[#008060]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span data-i18n="btn_hero_demo">See a Live Demo →</span>
+            </button>
+          </div>
+
+          <!-- Micro Trust Line -->
+          <div class="pt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-[#6D7175]">
+            <span class="flex items-center gap-1 text-[#008060]">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span data-i18n="trust_setup">10-minute setup</span>
+            </span>
+            <span class="text-[#BABFC3]">·</span>
+            <span data-i18n="trust_nocode">No code required</span>
+            <span class="text-[#BABFC3]">·</span>
+            <span data-i18n="trust_plans">Works with all Shopify plans (Basic to Plus)</span>
+          </div>
+
+          <!-- Regulatory Snapshot Strip -->
+          <div class="pt-4 grid grid-cols-3 gap-3 border-t border-[#E1E3E5] max-w-xl">
+            <div>
+              <div class="text-[11px] uppercase font-semibold text-[#6D7175] tracking-wider">Germany LUCID</div>
+              <div class="text-sm font-bold text-[#202223] mt-0.5">0 kg Threshold</div>
+              <div class="text-[10px] text-[#6D7175]">Mandatory from parcel 1</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase font-semibold text-[#6D7175] tracking-wider">France IDU</div>
+              <div class="text-sm font-bold text-[#202223] mt-0.5">Citeo / Adelphe</div>
+              <div class="text-[10px] text-[#6D7175]">Unique Producer ID</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase font-semibold text-[#6D7175] tracking-wider">EU PPWR Mandate</div>
+              <div class="text-sm font-bold text-[#008060] mt-0.5">Article 10 Ready</div>
+              <div class="text-[10px] text-[#6D7175]">Full declaration XML</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Polaris Mockup Card -->
+        <div class="lg:col-span-5">
+          <div class="polaris-card overflow-hidden shadow-sm">
+            <div class="bg-white border-b border-[#E1E3E5] px-4 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#008060]"></span>
+                <span class="font-semibold text-xs text-[#202223] tracking-tight">PackEPR Live EU Weight Ledger</span>
+              </div>
+              <span class="badge-neutral text-[10px]">Synced: 2 mins ago</span>
+            </div>
+
+            <!-- Card Metrics Header -->
+            <div class="bg-[#FAFBFB] border-b border-[#E1E3E5] p-3 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-white p-2.5 rounded border border-[#E1E3E5]">
+                <span class="text-[#6D7175] block text-[10px]">Total EU Packaging Dispatched</span>
+                <span class="text-base font-bold text-[#202223] tabular-nums">1,482.40 kg</span>
+                <span class="text-[10px] text-[#008060] font-medium block mt-0.5">↑ 124 orders this month</span>
+              </div>
+              <div class="bg-white p-2.5 rounded border border-[#E1E3E5]">
+                <span class="text-[#6D7175] block text-[10px]">Compliance Status</span>
+                <span class="text-xs font-bold text-[#1A512E] bg-[#E3F1DF] px-1.5 py-0.5 rounded inline-block mt-0.5">Audit Ready</span>
+                <span class="text-[10px] text-[#6D7175] block mt-0.5">ZSVR XML generated</span>
+              </div>
+            </div>
+
+            <!-- The Live Table with 1-click Download & Inspect actions -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs tabular-nums">
+                <thead class="bg-[#F6F6F7] text-[#6D7175] font-semibold border-b border-[#E1E3E5]">
+                  <tr>
+                    <th class="py-2.5 px-3">Country</th>
+                    <th class="py-2.5 px-2 text-right">PPK (Paper)</th>
+                    <th class="py-2.5 px-2 text-right">Plastic</th>
+                    <th class="py-2.5 px-3 text-center">Status</th>
+                    <th class="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E1E3E5] bg-white text-[11px]">
+                  <tr class="hover:bg-[#FAFBFB]">
+                    <td class="py-2.5 px-3 font-medium flex items-center gap-1.5">
+                      <span>🇩🇪</span>
+                      <div>
+                        <div class="text-[#202223] font-semibold">Germany (DE)</div>
+                        <div class="text-[10px] text-[#6D7175]">LUCID / ZSVR</div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">684.20 kg</td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">92.40 kg</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="badge-green text-[10px] py-0.5 px-1.5">Report Due</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <button data-hero-action="xml" class="text-[11px] font-semibold text-[#008060] hover:underline">Download XML</button>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-[#FAFBFB]">
+                    <td class="py-2.5 px-3 font-medium flex items-center gap-1.5">
+                      <span>🇫🇷</span>
+                      <div>
+                        <div class="text-[#202223] font-semibold">France (FR)</div>
+                        <div class="text-[10px] text-[#6D7175]">Citeo / Adelphe</div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">342.10 kg</td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">41.80 kg</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="badge-green text-[10px] py-0.5 px-1.5">Report Due</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <button data-hero-action="csv" class="text-[11px] font-semibold text-[#008060] hover:underline">Export CSV</button>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-[#FAFBFB]">
+                    <td class="py-2.5 px-3 font-medium flex items-center gap-1.5">
+                      <span>🇦🇹</span>
+                      <div>
+                        <div class="text-[#202223] font-semibold">Austria (AT)</div>
+                        <div class="text-[10px] text-[#6D7175]">ARA Lizenz</div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">128.50 kg</td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">14.20 kg</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="badge-green text-[10px] py-0.5 px-1.5">OK (&lt;1.5t)</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <button data-country-inspect="AT" class="text-[11px] font-semibold text-[#005BD3] hover:underline">View</button>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-[#FAFBFB]">
+                    <td class="py-2.5 px-3 font-medium flex items-center gap-1.5">
+                      <span>🇮🇹</span>
+                      <div>
+                        <div class="text-[#202223] font-semibold">Italy (IT)</div>
+                        <div class="text-[10px] text-[#6D7175]">CONAI</div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">96.00 kg</td>
+                    <td class="py-2.5 px-2 text-right font-mono text-[#202223] font-medium">8.60 kg</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="badge-green text-[10px] py-0.5 px-1.5">OK</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <button data-country-inspect="IT" class="text-[11px] font-semibold text-[#005BD3] hover:underline">View</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Card Bottom Bar -->
+            <div class="bg-[#FAFBFB] p-3 border-t border-[#E1E3E5] flex items-center justify-between text-[11px] text-[#6D7175]">
+              <span class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-[#008060]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                Standard ZSVR Formats: PPK, Kunststoffe, Metalle
+              </span>
+              <span class="font-medium text-[#202223]">ISO 14021 Ready</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4-CARD PROOF STRIP -->
+    <section class="border-b border-[#E1E3E5] bg-[#F6F6F7] py-6 px-4 sm:px-6 lg:px-12">
+      <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        
+        <div class="polaris-card p-4 text-center">
+          <div class="text-2xl font-bold text-[#202223] tabular-nums tracking-tight">0 kg</div>
+          <div class="text-xs font-semibold text-[#6D7175] mt-1" data-i18n="proof_de_title">Germany Threshold</div>
+          <div class="text-[11px] text-[#8C9196] mt-0.5" data-i18n="proof_de_sub">Mandatory from 1st parcel</div>
+        </div>
+
+        <div class="polaris-card p-4 text-center">
+          <div class="text-2xl font-bold text-[#D72C0D] tabular-nums tracking-tight">€200,000</div>
+          <div class="text-xs font-semibold text-[#6D7175] mt-1" data-i18n="proof_fine_title">Max Fine (VerpackDG)</div>
+          <div class="text-[11px] text-[#8C9196] mt-0.5" data-i18n="proof_fine_sub">+ Sales bans on German marketplaces</div>
+        </div>
+
+        <div class="polaris-card p-4 text-center">
+          <div class="text-2xl font-bold text-[#008060] tabular-nums tracking-tight">Aug 12, 2026</div>
+          <div class="text-xs font-semibold text-[#6D7175] mt-1" data-i18n="proof_ppwr_title">EU PPWR In Effect</div>
+          <div class="text-[11px] text-[#8C9196] mt-0.5" data-i18n="proof_ppwr_sub">Regulation (EU) 2025/40</div>
+        </div>
+
+        <div class="polaris-card p-4 text-center">
+          <div class="text-2xl font-bold text-[#202223] tabular-nums tracking-tight">0.000 kg</div>
+          <div class="text-xs font-semibold text-[#6D7175] mt-1" data-i18n="proof_prec_title">ZSVR 3-Decimal Precision</div>
+          <div class="text-[11px] text-[#8C9196] mt-0.5" data-i18n="proof_prec_sub">Audit-proof tare calculation</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- THE PROBLEM SECTION -->
+    <section class="py-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-white">
+      <div class="max-w-7xl mx-auto">
+        <div class="max-w-3xl mb-12">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#008060] mb-2" data-i18n="problem_tag">The Shopify Compliance Gap</div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-[#202223] tracking-tight" data-i18n="problem_title">
+            Shopify's Weight Field Doesn't Track What the EU Regulates
+          </h2>
+          <p class="text-[#6D7175] text-sm sm:text-base mt-3 leading-relaxed" data-i18n="problem_desc">
+            Standard ecommerce workflows calculate freight based on the product. But under EU law (VerpackDG &amp; Citeo), every single gram of secondary packaging, infill paper, and tape counts as packaging waste subject to mandatory license fees and audit reporting.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="polaris-card polaris-card-hover p-6 flex flex-col justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-md bg-[#FFF3D6] flex items-center justify-center text-[#7A4F01] mb-4">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+              </div>
+              <h3 class="font-bold text-lg text-[#202223] mb-2" data-i18n="prob1_title">Shopify Weight ≠ Tare Weight</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed" data-i18n="prob1_desc">
+                Shopify product weight is courier billing weight. EU law strictly requires declaring the empty shipping carton, mailer envelope, and adhesive tape tare weight separated by material fraction.
+              </p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-[#E1E3E5] text-xs font-semibold text-[#D72C0D] flex items-center gap-1.5">
+              <span>⚠ Filing product weight violates ZSVR rules</span>
+            </div>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6 flex flex-col justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-md bg-[#FEEBEE] flex items-center justify-center text-[#D72C0D] mb-4">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+              <h3 class="font-bold text-lg text-[#202223] mb-2" data-i18n="prob2_title">Severe Administrative Fines</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed" data-i18n="prob2_desc">
+                Germany fines up to €200,000 under VerpackDG with sales bans on Amazon.de and Otto. France fines up to €30,000 for missing IDU declarations.
+              </p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-[#E1E3E5] text-xs font-semibold text-[#D72C0D] flex items-center gap-1.5">
+              <span>⚠ Audits triggered automatically at customs</span>
+            </div>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6 flex flex-col justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-md bg-[#FAFBFB] border border-[#E1E3E5] flex items-center justify-center text-[#202223] mb-4">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <h3 class="font-bold text-lg text-[#202223] mb-2" data-i18n="prob3_title">Schema-Certified XML Export</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed" data-i18n="prob3_desc">
+                PackEPR generates exact ZSVR Schema 2.4 compliant XML. Every kilogram figure is calculated to 3 decimal places (0.000 kg) matching German dual system operator portals.
+              </p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-[#E1E3E5] text-xs font-semibold text-[#1A512E] flex items-center gap-1.5">
+              <span>✓ Certified for Lizenzero, Landbell &amp; DSD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section id="section-how-it-works" class="py-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-[#F6F6F7]">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#008060] mb-2" data-i18n="how_tag">Simple 3-Step Workflow</div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-[#202223] tracking-tight" data-i18n="how_title">
+            From First Order to Certified LUCID XML in 10 Minutes
+          </h2>
+          <p class="text-[#6D7175] text-sm sm:text-base mt-2" data-i18n="how_sub">
+            Zero spreadsheet formulas. Zero manual weight weighing on every shipment.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="polaris-card p-6 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="w-8 h-8 rounded-full bg-[#E3F1DF] text-[#1A512E] font-bold text-sm flex items-center justify-center">1</span>
+                <span class="text-xs text-[#6D7175] font-medium">Step 01 / Setup</span>
+              </div>
+              <h3 class="font-bold text-base text-[#202223] mb-2" data-i18n="step1_title">Connect Shopify</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed mb-4" data-i18n="step1_desc">
+                Authorize PackEPR with 1-click OAuth. We request strictly read_orders and read_products scope. We never alter your store catalog, checkouts, or pricing.
+              </p>
+            </div>
+            <div class="bg-[#FAFBFB] p-2.5 rounded border border-[#E1E3E5] text-[11px] text-[#4A4D50]">
+              Official Shopify App Store API Security Compliant
+            </div>
+          </div>
+
+          <div class="polaris-card p-6 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="w-8 h-8 rounded-full bg-[#E3F1DF] text-[#1A512E] font-bold text-sm flex items-center justify-center">2</span>
+                <span class="text-xs text-[#6D7175] font-medium">Step 02 / Presets</span>
+              </div>
+              <h3 class="font-bold text-base text-[#202223] mb-2" data-i18n="step2_title">Assign Box Presets</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed mb-4" data-i18n="step2_desc">
+                Weigh your empty cartons once (e.g. Small Carton = 120g Paper, 12g Tape). Set standard rules or let our heuristic match package presets to SKU dimensions.
+              </p>
+            </div>
+            <div class="bg-[#FAFBFB] p-2.5 rounded border border-[#E1E3E5] text-[11px] text-[#4A4D50]">
+              Automatic Tare multiplication across EU shipments
+            </div>
+          </div>
+
+          <div class="polaris-card p-6 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="w-8 h-8 rounded-full bg-[#E3F1DF] text-[#1A512E] font-bold text-sm flex items-center justify-center">3</span>
+                <span class="text-xs text-[#6D7175] font-medium">Step 03 / Filing</span>
+              </div>
+              <h3 class="font-bold text-base text-[#202223] mb-2" data-i18n="step3_title">Download LUCID XML &amp; Citeo CSV</h3>
+              <p class="text-sm text-[#6D7175] leading-relaxed mb-4" data-i18n="step3_desc">
+                Click export to generate the official German ZSVR XML file ready for drag-and-drop into the LUCID portal, and the exact Citeo declaration CSV for France.
+              </p>
+            </div>
+            <div class="bg-[#FAFBFB] p-2.5 rounded border border-[#E1E3E5] text-[11px] text-[#4A4D50]">
+              1-click upload to dual system duales-system.de
+            </div>
+          </div>
+        </div>
+
+        <!-- Call to Action Banner inside How it Works -->
+        <div class="mt-10 text-center">
+          <button id="btn-how-launch-calculator" class="polaris-btn-primary px-6 py-3 text-sm sm:text-base font-semibold inline-flex items-center gap-2 shadow-sm">
+            <span data-i18n="btn_test_csv">Test With Your CSV Now →</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section id="section-features" class="py-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-white">
+      <div class="max-w-7xl mx-auto">
+        <div class="max-w-2xl mb-12">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#008060] mb-2" data-i18n="feat_tag">Built Specifically for EU Compliance</div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-[#202223] tracking-tight" data-i18n="feat_title">
+            Everything Required for Full Packaging EPR Compliance
+          </h2>
+          <p class="text-[#6D7175] text-sm sm:text-base mt-2" data-i18n="feat_sub">
+            Engineered to satisfy the exact reporting standards of Germany’s Verpackungsregister and French ADEME.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">🇩🇪</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">Germany LUCID XML</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              Generates the official ZSVR Datenmeldung schema. Separates Papier/Pappe/Karton (PPK), Kunststoffe, and Glas fractions into exact kilogram figures required by your dual system partner.
+            </p>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">🇫🇷</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">France Citeo CSV</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              Formats your order line weights according to the French ADEME UVI schema. Ready for one-click upload to the Citeo or Adelphe portal to maintain your Unique Identification Number (IDU).
+            </p>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">📦</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">Box Tare Presets</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              Save box and mailer tare weights once. Assign them to SKU collections or fulfillment locations. PackEPR automatically multiplies box weights across all cross-border EU dispatches.
+            </p>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">📊</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">Live EU Weight Ledger</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              Real-time kg telemetry across DE, FR, AT, IT, ES, and NL. Track when you are approaching legal exemption ceilings or when annual mass-balance declarations are due.
+            </p>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">🔒</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">Minimal Permissions</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              We only request read-only access to order destination addresses and line item weights. Customer personally identifiable information (PII) is discarded post-aggregation.
+            </p>
+          </div>
+
+          <div class="polaris-card polaris-card-hover p-6">
+            <div class="text-2xl mb-3">⚡</div>
+            <h3 class="font-bold text-base text-[#202223] mb-1.5">10-Minute Setup</h3>
+            <p class="text-sm text-[#6D7175] leading-relaxed">
+              Full historical audit ready in one coffee break. Import past 12 months of Shopify order history with a single click to backfill previous year declarations before audit deadlines.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EU REGULATIONS GUIDE SECTION -->
+    <section id="section-regulations" class="py-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-[#F6F6F7]">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-[#008060] mb-2" data-i18n="reg_tag">Country-by-Country Regulatory Guide</div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-[#202223] tracking-tight" data-i18n="reg_title">
+              2026 EU Packaging Obligations by Member State
+            </h2>
+          </div>
+          <div class="text-xs text-[#6D7175] flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-[#008060]"></span>
+            <span>Next Reporting Deadline: <strong>Nov 12, 2026</strong></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          
+          <!-- Germany Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇩🇪</span> Germany (DE)
+                </span>
+                <span class="badge-green text-xs">0 kg Threshold</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> ZSVR LUCID (Verpackungsgesetz)</div>
+                <div><strong>Dual Systems:</strong> Lizenzero, Landbell, BellandVision, DSD</div>
+                <div><strong>Penalties:</strong> Up to €200,000 fine &amp; marketplace ban</div>
+                <div><strong>Key Requirement:</strong> Non-EU merchants must appoint an EU Authorised Representative (§ 5(2)).</div>
+              </div>
+            </div>
+            <button data-country-inspect="DE" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+          <!-- France Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇫🇷</span> France (FR)
+                </span>
+                <span class="badge-green text-xs">0 kg Threshold</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> ADEME / Citeo / Adelphe</div>
+                <div><strong>Identifier:</strong> Unique Identification Number (IDU)</div>
+                <div><strong>Pricing:</strong> Flat fee ~€110/yr under 10,000 units (CSU)</div>
+                <div><strong>Penalties:</strong> Up to €30,000 per violation</div>
+              </div>
+            </div>
+            <button data-country-inspect="FR" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+          <!-- Austria Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇦🇹</span> Austria (AT)
+                </span>
+                <span class="badge-neutral text-xs">≤1,500 kg Lump Sum</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> ARA Austria / Bonus Holsystem</div>
+                <div><strong>Threshold:</strong> Simplified flat license fee under 1,500 kg</div>
+                <div><strong>Pricing:</strong> ~€90–€150/year lump-sum</div>
+                <div><strong>Representative:</strong> Mandatory notary-certified Bevollmächtigter</div>
+              </div>
+            </div>
+            <button data-country-inspect="AT" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+          <!-- Italy Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇮🇹</span> Italy (IT)
+                </span>
+                <span class="badge-neutral text-xs">Per Tonne Tariff</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> CONAI Consortium</div>
+                <div><strong>Rules:</strong> Environmental labeling code on packaging (DLgs 116/2020)</div>
+                <div><strong>Tariffs:</strong> CAC contribution differentiated by recyclability</div>
+              </div>
+            </div>
+            <button data-country-inspect="IT" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+          <!-- Spain Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇪🇸</span> Spain (ES)
+                </span>
+                <span class="badge-neutral text-xs">&lt;15 Tonnes Simplified</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> MITECO / Ecoembes (RD 1055/2022)</div>
+                <div><strong>Registration:</strong> Registro de Productores de Producto</div>
+                <div><strong>Representative:</strong> Spanish Authorised Representative required</div>
+              </div>
+            </div>
+            <button data-country-inspect="ES" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+          <!-- Netherlands Card -->
+          <div class="polaris-card p-5 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-bold text-base text-[#202223] flex items-center gap-2">
+                  <span>🇳🇱</span> Netherlands (NL)
+                </span>
+                <span class="badge-neutral text-xs">50,000 kg Threshold</span>
+              </div>
+              <div class="text-xs text-[#6D7175] space-y-1.5 mb-4">
+                <div><strong>Authority:</strong> Verpact (formerly Afvalfonds Verpakkingen)</div>
+                <div><strong>General Exemption:</strong> 50,000 kg general packaging exemption</div>
+                <div><strong>SUP Exception:</strong> 0 kg threshold for Single-Use Plastics</div>
+              </div>
+            </div>
+            <button data-country-inspect="NL" class="polaris-btn-secondary w-full py-1.5 text-xs font-semibold text-[#008060]">
+              Full Rules &amp; Tariffs →
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING SECTION -->
+    <section id="section-pricing" class="scroll-mt-24 py-16 px-4 sm:px-6 lg:px-12 border-b border-[#E1E3E5] bg-[#FAFBFB]">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#008060] mb-2" data-i18n="price_tag">Transparent Compliance Pricing</div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-[#202223] tracking-tight" data-i18n="price_title">
+            Priced to Prevent €200,000 Fines for Any Store Size
+          </h2>
+          <p class="text-[#6D7175] text-sm sm:text-base mt-2" data-i18n="price_sub">
+            No hidden transaction fees. All plans include automated EU destination sorting and weight aggregations.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          
+          <!-- Tier 1: Free Audit -->
+          <div class="polaris-card p-7 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg text-[#202223]">Free Audit</span>
+                <span class="badge-neutral">Starter</span>
+              </div>
+              <p class="text-xs text-[#6D7175] min-h-[36px]">
+                Ideal for new merchants verifying whether they cross German or French registration limits.
+              </p>
+              
+              <div class="my-6 pb-6 border-b border-[#E1E3E5]">
+                <div class="flex items-baseline gap-1">
+                  <span class="text-4xl font-bold text-[#202223] tabular-nums tracking-tight">€0</span>
+                  <span class="text-xs font-semibold text-[#6D7175]">/ month</span>
+                </div>
+                <span class="text-[11px] text-[#6D7175] mt-1 block">Free forever. No credit card required.</span>
+              </div>
+
+              <div class="space-y-3 text-xs text-[#202223]">
+                <div class="font-semibold text-[#6D7175] uppercase text-[11px] tracking-wider mb-2">Included Features:</div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Live EU weight ledger dashboard</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Threshold alerts for 6 core countries (DE, FR, AT, IT, ES, NL)</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Up to 200 orders per month</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-4">
+              <button class="plan-select-btn polaris-btn-secondary w-full text-center py-2" data-plan="free">
+                Install Free Plan
+              </button>
+            </div>
+          </div>
+
+          <!-- Tier 2: Starter Plan (Most Popular) -->
+          <div class="polaris-card p-7 bg-white relative flex flex-col justify-between ring-2 ring-[#008060] shadow-md">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span class="bg-[#008060] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                Most Popular
+              </span>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg text-[#202223]">Starter Plan</span>
+                <span class="badge-green text-xs font-semibold">Ready for LUCID</span>
+              </div>
+              <p class="text-xs text-[#6D7175] min-h-[36px]">
+                Full automated filing for stores selling into Germany and France. 100% compliant.
+              </p>
+              
+              <div class="my-6 pb-6 border-b border-[#E1E3E5]">
+                <div class="flex items-baseline gap-1">
+                  <span class="text-4xl font-bold text-[#202223] tabular-nums tracking-tight">€14</span>
+                  <span class="text-xs font-semibold text-[#6D7175]">/ month</span>
+                </div>
+                <span class="text-[11px] text-[#008060] font-semibold mt-1 block">Or €129/year (Save 23%)</span>
+              </div>
+
+              <div class="space-y-3 text-xs text-[#202223]">
+                <div class="font-semibold text-[#6D7175] uppercase text-[11px] tracking-wider mb-2">Everything in Free, plus:</div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span class="font-semibold text-[#202223]">1-Click Official Germany LUCID XML</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span class="font-semibold text-[#202223]">1-Click France Citeo / Adelphe CSV</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Unlimited orders per month</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Custom Box &amp; Mailer Tare Presets</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-4">
+              <button class="plan-select-btn polaris-btn-primary w-full text-center py-2" data-plan="starter">
+                Start 14-Day Free Trial
+              </button>
+            </div>
+          </div>
+
+          <!-- Tier 3: EU PPWR Pro -->
+          <div class="polaris-card p-7 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center mb-3">
+                <span class="font-bold text-lg text-[#202223]">EU PPWR Pro</span>
+                <span class="badge-neutral">Enterprise</span>
+              </div>
+              <p class="text-xs text-[#6D7175] min-h-[36px]">
+                For pan-European brands requiring reporting across all EU member states and PPWR Article 10.
+              </p>
+              
+              <div class="my-6 pb-6 border-b border-[#E1E3E5]">
+                <div class="flex items-baseline gap-1">
+                  <span class="text-4xl font-bold text-[#202223] tabular-nums tracking-tight">€39</span>
+                  <span class="text-xs font-semibold text-[#6D7175]">/ month</span>
+                </div>
+                <span class="text-[11px] text-[#6D7175] mt-1 block">Billed monthly or annually</span>
+              </div>
+
+              <div class="space-y-3 text-xs text-[#202223]">
+                <div class="font-semibold text-[#6D7175] uppercase text-[11px] tracking-wider mb-2">Everything in Starter, plus:</div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span class="font-semibold text-[#202223]">All 27 EU Member States Covered</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>CONAI (IT) + ARA (AT) + MITECO (ES) + Verpact (NL)</span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <svg class="w-4 h-4 text-[#008060] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>PPWR Article 10 Conformity Declaration .TXT</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-4">
+              <button class="plan-select-btn polaris-btn-secondary w-full text-center py-2" data-plan="pro">
+                Select Pro Plan
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Acceptance Guarantee Banner -->
+        <div class="mt-12 polaris-card p-4 bg-white max-w-3xl mx-auto flex items-center justify-between gap-4 text-xs">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🛡️</span>
+            <div>
+              <span class="font-bold text-[#202223] block">100% ZSVR Schema Acceptance Guarantee</span>
+              <span class="text-[#6D7175]">If your XML fails German LUCID validation, our compliance engineers fix it within 4 hours.</span>
+            </div>
+          </div>
+          <span class="badge-green shrink-0">Certified</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-[#F6F6F7] border-t border-[#E1E3E5] py-12 px-4 sm:px-6 lg:px-12 text-xs text-[#6D7175]">
+      <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded bg-[#008060] flex items-center justify-center text-white">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </span>
+            <span class="font-bold text-sm text-[#202223]">PackEPR</span>
+          </div>
+          <span class="hidden sm:inline text-[#BABFC3]">|</span>
+          <span>EU Packaging Compliance for Shopify Merchants</span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-6 font-medium">
+          <button id="footer-btn-privacy" class="hover:text-[#202223] transition-colors">Privacy Policy</button>
+          <button id="footer-btn-terms" class="hover:text-[#202223] transition-colors">Terms of Service</button>
+          <button id="footer-btn-security" class="hover:text-[#202223] transition-colors">Security</button>
+          <button id="footer-btn-support" class="hover:text-[#202223] transition-colors">Contact Support</button>
+        </div>
+
+        <div class="flex items-center gap-1.5 font-medium text-[#4A4D50]">
+          <span>Made in India 🇮🇳 for Europe 🇪🇺</span>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto mt-6 pt-6 border-t border-[#E1E3E5] text-center text-[11px] text-[#8C9196]">
+        PackEPR is an independent compliance technology application and is not directly affiliated with Shopify Inc., Zentrale Stelle Verpackungsregister (ZSVR), or Citeo. All trademarks belong to their respective owners.
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. MODE 2: INTERACTIVE CALCULATOR WORKSPACE -->
+  <!-- ========================================== -->
+  <div id="app-workspace-wrapper" class="hidden flex-1 flex flex-col">
+
+    <!-- Workspace Sub-Toolbar -->
+    <div class="bg-white border-b border-[#E1E3E5] px-4 sm:px-6 py-2.5">
+      <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button id="btn-back-to-landing" class="polaris-btn-secondary px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
+            ← <span data-i18n="btn_back_landing">Back to Overview</span>
+          </button>
+          <span class="text-xs text-[#6D7175]">/</span>
+          <span class="text-xs font-semibold text-[#202223]">EU Compliance Workspace &amp; Ledger</span>
+        </div>
+
+        <!-- 4 Sub-Tabs -->
+        <nav class="flex items-center gap-1 overflow-x-auto py-0.5">
+          <button id="tab-btn-dashboard" data-tab="dashboard" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium bg-[#F1F2F4] text-[#202223] border border-[#DCDDDF] transition">
+            1. Orders &amp; EU Weight Audit
+          </button>
+          <button id="tab-btn-presets" data-tab="presets" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
+            2. Box Weight Presets
+          </button>
+          <button id="tab-btn-export" data-tab="export" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
+            3. LUCID XML &amp; Citeo Export
+          </button>
+          <button id="tab-btn-blueprint" data-tab="blueprint" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
+            4. Antigravity Spec &amp; Sales Kit
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-5">
+      
+      <!-- TAB 1: OVERVIEW & ORDERS -->
+      <section id="view-dashboard" class="space-y-5">
+        
+        <!-- Header & Primary Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+          <div>
+            <h2 class="text-lg font-semibold text-[#202223]">EU Packaging Weight Ledger</h2>
+            <p class="text-xs sm:text-sm text-[#6D7175]">
+              Calculates actual empty carton (PPK) and mailer plastic weights across EU destination countries.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="csv-upload" class="cursor-pointer polaris-btn-secondary text-xs sm:text-sm font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-[#5C5F62]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4"/></svg>
+              <span>Upload Shopify CSV</span>
+              <input id="csv-upload" type="file" accept=".csv" class="hidden" />
+            </label>
+            <button id="btn-load-sample" class="polaris-btn-secondary text-xs sm:text-sm font-medium px-3 py-1.5 rounded-md transition">
+              Load Sample EU Orders
+            </button>
+            <button id="btn-go-export" class="polaris-btn-primary text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-md transition">
+              Generate LUCID XML →
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Accounting Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div class="polaris-card p-4">
+            <div class="text-xs font-medium text-[#6D7175]">EU Shipments in Period</div>
+            <div id="kpi-total-orders" class="text-2xl font-semibold text-[#202223] tabular-nums mt-1">0</div>
+            <div id="kpi-countries-count" class="text-xs text-[#6D7175] mt-1">0 destination countries</div>
+          </div>
+          <div class="polaris-card p-4">
+            <div class="text-xs font-medium text-[#6D7175]">Paper &amp; Cardboard (PPK)</div>
+            <div id="kpi-cardboard-kg" class="text-2xl font-semibold text-[#202223] tabular-nums mt-1">0.000 kg</div>
+            <div class="text-xs text-[#6D7175] mt-1">Fraction: <span class="font-mono text-[#202223]">Papier/Pappe/Karton</span></div>
+          </div>
+          <div class="polaris-card p-4">
+            <div class="text-xs font-medium text-[#6D7175]">Plastics (Kunststoffe)</div>
+            <div id="kpi-plastic-kg" class="text-2xl font-semibold text-[#202223] tabular-nums mt-1">0.000 kg</div>
+            <div class="text-xs text-[#6D7175] mt-1">Fraction: <span class="font-mono text-[#202223]">LDPE / Klebeband</span></div>
+          </div>
+          <div class="polaris-card p-4">
+            <div class="text-xs font-medium text-[#6D7175]">Est. Annual Dual-System Fee</div>
+            <div id="kpi-est-fee" class="text-2xl font-semibold text-[#008060] tabular-nums mt-1">€0</div>
+            <div class="text-xs text-[#6D7175] mt-1">Based on Lizenzero &amp; Citeo tariffs</div>
+          </div>
+        </div>
+
+        <!-- Country Registry Table + Material Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          <!-- National EPR Obligations by Country Table -->
+          <div class="lg:col-span-7 polaris-card flex flex-col">
+            <div class="px-4 py-3 border-b border-[#E1E3E5] flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold text-sm text-[#202223]">National EPR Obligations by Country</h3>
+                <p class="text-xs text-[#6D7175]">Aggregated net packaging mass per destination member state</p>
+              </div>
+              <span class="text-[11px] font-mono text-[#6D7175]">Reg. (EU) 2025/40</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm tabular-nums">
+                <thead>
+                  <tr class="border-b border-[#E1E3E5] bg-[#FAFBFB] text-[#6D7175]">
+                    <th class="py-2.5 pl-4 pr-2 font-medium">Destination &amp; Register</th>
+                    <th class="py-2.5 px-2 font-medium text-right">Orders</th>
+                    <th class="py-2.5 px-2 font-medium text-right">PPK (kg)</th>
+                    <th class="py-2.5 px-2 font-medium text-right">Plastic (kg)</th>
+                    <th class="py-2.5 pl-2 pr-4 font-medium">Threshold Status</th>
+                  </tr>
+                </thead>
+                <tbody id="country-summary-tbody" class="divide-y divide-[#E1E3E5]">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Material Weight Distribution Chart -->
+          <div class="lg:col-span-5 polaris-card p-4 flex flex-col justify-between">
+            <div>
+              <h3 class="font-semibold text-sm text-[#202223]">Material Weight by Market (kg)</h3>
+              <p class="text-xs text-[#6D7175]">Cardboard (PPK) vs. Plastic film mass</p>
+            </div>
+            <div class="relative h-60 mt-3">
+              <canvas id="countryWeightChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order-Level Packaging Assignment Ledger -->
+        <div class="polaris-card overflow-hidden">
+          <div class="px-4 py-3 border-b border-[#E1E3E5] flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="font-semibold text-sm text-[#202223]">Order-Level Packaging Assignment</h3>
+              <p class="text-xs text-[#6D7175]">Each order is matched with a Box Preset to compute tare cardboard and plastic weight</p>
+            </div>
+            <button id="btn-clear-orders" class="text-xs font-medium text-[#D82C0D] hover:underline">
+              Reset to Default Orders
+            </button>
+          </div>
+
+          <!-- Manual Order Entry Row -->
+          <form id="add-order-form" class="p-3.5 bg-[#FAFBFB] border-b border-[#E1E3E5] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Order Number</label>
+              <input id="input-order-id" type="text" value="#DE-1094" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm font-mono" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Fulfillment Date</label>
+              <input id="input-order-date" type="date" value="2026-10-15" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Shipping Country</label>
+              <select id="input-order-country" class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm">
+                <option value="DE">Germany (DE)</option>
+                <option value="FR">France (FR)</option>
+                <option value="AT">Austria (AT)</option>
+                <option value="IT">Italy (IT)</option>
+                <option value="ES">Spain (ES)</option>
+                <option value="NL">Netherlands (NL)</option>
+              </select>
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Assigned Packaging Preset</label>
+              <select id="input-order-preset" class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm"></select>
+            </div>
+            <div>
+              <button type="submit" class="w-full polaris-btn-secondary font-medium text-xs sm:text-sm py-1.5 px-3 rounded-md transition">
+                + Add Order
+              </button>
+            </div>
+          </form>
+
+          <!-- Orders Table -->
+          <div class="overflow-x-auto max-h-80">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm tabular-nums">
+              <thead>
+                <tr class="border-b border-[#E1E3E5] bg-white text-[#6D7175] sticky top-0">
+                  <th class="py-2 pl-4 pr-2 font-medium">Order</th>
+                  <th class="py-2 px-2 font-medium">Date</th>
+                  <th class="py-2 px-2 font-medium">Market</th>
+                  <th class="py-2 px-2 font-medium">Packaging Box Preset</th>
+                  <th class="py-2 px-2 font-medium text-right">PPK (g)</th>
+                  <th class="py-2 px-2 font-medium text-right">Plastic (g)</th>
+                  <th class="py-2 pl-2 pr-4 font-medium text-right">Remove</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody" class="divide-y divide-[#E1E3E5]">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PACKAGING BOX PRESETS -->
+      <section id="view-presets" class="hidden space-y-5">
+        <div class="polaris-card p-5 space-y-4">
+          <div>
+            <h2 class="text-base font-semibold text-[#202223]">Box Weight Presets (Tare Weights)</h2>
+            <p class="text-xs sm:text-sm text-[#6D7175]">
+              Weigh your empty shipping cartons, mailers, and tape once on a kitchen scale. PackEPR stores these as Shopify metafields and multiplies them across your fulfilled orders.
+            </p>
+          </div>
+
+          <form id="add-preset-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 bg-[#FAFBFB] p-3.5 rounded-lg border border-[#E1E3E5] items-end">
+            <div class="lg:col-span-2">
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Box / Mailer Label</label>
+              <input id="preset-name" type="text" placeholder="e.g. DHL Kleinpaket Carton" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Cardboard PPK (g)</label>
+              <input id="preset-cardboard" type="number" min="0" value="140" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Plastic / Tape (g)</label>
+              <input id="preset-plastic" type="number" min="0" value="8" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm tabular-nums" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Glass / Foil (g)</label>
+              <input id="preset-other" type="number" min="0" value="0" required class="polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm tabular-nums" />
+            </div>
+            <div>
+              <button type="submit" class="w-full polaris-btn-primary font-medium text-xs sm:text-sm py-1.5 px-3 rounded-md transition">
+                + Save Box Preset
+              </button>
+            </div>
+          </form>
+
+          <div id="presets-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: OFFICIAL LUCID XML & CITEO EXPORT -->
+      <section id="view-export" class="hidden space-y-5">
+        <div class="polaris-card p-5 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E1E3E5] pb-4">
+            <div>
+              <h2 class="text-base font-semibold text-[#202223]">Generate Official ZSVR LUCID &amp; Citeo Declarations</h2>
+              <p class="text-xs sm:text-sm text-[#6D7175]">
+                Produces validated XML and CSV files formatted for direct upload to Germany's LUCID portal and France's Citeo portal.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="btn-download-xml" class="polaris-btn-primary text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-md transition">
+                Download Germany LUCID .XML
+              </button>
+              <button id="btn-download-csv" class="polaris-btn-secondary text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-md transition">
+                Download France Citeo .CSV
+              </button>
+              <button id="btn-download-ppwr" class="polaris-btn-secondary text-xs sm:text-sm font-medium px-3 py-1.5 rounded-md transition">
+                Download EU PPWR Conformity .TXT
+              </button>
+            </div>
+          </div>
+
+          <!-- Merchant Producer IDs -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 bg-[#FAFBFB] p-3.5 rounded-lg border border-[#E1E3E5]">
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">ZSVR LUCID Reg. Number</label>
+              <input id="cfg-lucid-id" type="text" value="DE5294810394812" class="cfg-input polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Dual System Operator (DE)</label>
+              <select id="cfg-system-op" class="cfg-input polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm">
+                <option value="INTERSEROH">Lizenzero (Interseroh+ GmbH)</option>
+                <option value="LANDBELL">Landbell AG (EASyShop)</option>
+                <option value="BELLAND">BellandVision GmbH</option>
+                <option value="GRUENER_PUNKT">Der Grüne Punkt (DSD)</option>
+                <option value="ZENTEK">Zentek GmbH &amp; Co. KG</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">France Citeo IDU Number</label>
+              <input id="cfg-citeo-idu" type="text" value="FR284910_01XXXX" class="cfg-input polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#6D7175] mb-1">Reporting Period</label>
+              <select id="cfg-period" class="cfg-input polaris-input w-full px-2.5 py-1.5 text-xs sm:text-sm">
+                <option value="2026-Y">2026 Annual Report</option>
+                <option value="2026-Q4">2026 Q4 (Oct–Dec)</option>
+                <option value="2026-Q3">2026 Q3 (Jul–Sep)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Live File Output Code Inspectors -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="border border-[#E1E3E5] rounded-lg overflow-hidden flex flex-col">
+              <div class="bg-[#FAFBFB] px-3.5 py-2 border-b border-[#E1E3E5] flex items-center justify-between">
+                <span class="text-xs font-medium text-[#202223]">LUCID_VerpackDG_2026_Report.xml</span>
+                <button id="btn-copy-xml" class="text-xs font-medium text-[#005BD3] hover:underline">Copy XML</button>
+              </div>
+              <pre id="xml-preview" class="code-scroll text-xs font-mono text-[#202223] bg-white p-3.5 overflow-x-auto flex-1 leading-relaxed"></pre>
+            </div>
+
+            <div class="border border-[#E1E3E5] rounded-lg overflow-hidden flex flex-col">
+              <div class="bg-[#FAFBFB] px-3.5 py-2 border-b border-[#E1E3E5] flex items-center justify-between">
+                <span class="text-xs font-medium text-[#202223]">Citeo_EU_PPWR_2026_Report.csv</span>
+                <button id="btn-copy-csv" class="text-xs font-medium text-[#005BD3] hover:underline">Copy CSV</button>
+              </div>
+              <pre id="csv-preview" class="code-scroll text-xs font-mono text-[#202223] bg-white p-3.5 overflow-x-auto flex-1 leading-relaxed"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: DEVELOPER & OUTREACH BLUEPRINT -->
+      <section id="view-blueprint" class="hidden space-y-5">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="polaris-card p-5 space-y-3 flex flex-col">
+            <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+              <div>
+                <h3 class="text-sm font-semibold text-[#202223]">Shopify Backend Spec (For Antigravity / Cursor)</h3>
+                <p class="text-xs text-[#6D7175]">Connects this UI to live Shopify Admin GraphQL &amp; Billing APIs</p>
+              </div>
+              <button id="btn-copy-antigravity" class="polaris-btn-secondary text-xs font-medium px-3 py-1.5 rounded-md">
+                Copy Prompt
+              </button>
+            </div>
+            <pre id="antigravity-prompt" class="code-scroll text-xs font-mono text-[#202223] bg-[#FAFBFB] p-3.5 rounded-md border border-[#E1E3E5] overflow-x-auto whitespace-pre-wrap flex-1 leading-relaxed">Build a Shopify Remix / Next.js embedded app named "PackEPR" using Shopify Polaris and Prisma (SQLite/Supabase):
+1. OAuth Scopes: read_orders, read_products, write_products.
+2. Database Models:
+   - BoxPreset (id, shop, name, cardboardGrams, plasticGrams, glassGrams, isDefault)
+   - MerchantConfig (shop, lucidNumber, dualSystemCode, citeoIdu, planTier)
+3. Order Sync Webhook &amp; GraphQL Query:
+   - Fetch orders filtered by created_at and shippingAddress.countryCodeV2 in ['DE','FR','AT','IT','ES','NL','PL','SE','BE'].
+   - Multiply order count by assigned BoxPreset material weights (convert grams to kg with 3 decimals).
+4. Export Endpoints:
+   - /api/export/lucid-xml: Output ZSVR LUCID compliant XML with &lt;Datenmeldung&gt;, &lt;Registrierungsnummer&gt;, &lt;Systembetreiber&gt;, and &lt;MaterialFraktion&gt; (PPK, KUNSTSTOFFE, GLAS).
+   - /api/export/citeo-csv: Output France Citeo / EU country summary CSV.
+5. Monetization (Shopify Billing API):
+   - Free Tier: Shows live country kg dashboard &amp; threshold warnings.
+   - Starter ($14/mo or $129/yr): Unlocks 1-click LUCID XML &amp; Citeo CSV downloads.</pre>
+          </div>
+
+          <div class="polaris-card p-5 space-y-3 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-[#202223]">German "Impressum" Lead Search &amp; Cold Email</h3>
+                  <p class="text-xs text-[#6D7175]">Find direct founder emails on German Shopify stores for ₹0</p>
+                </div>
+                <button id="btn-copy-email" class="polaris-btn-primary text-xs font-medium px-3 py-1.5 rounded-md">
+                  Copy Outreach Email
+                </button>
+              </div>
+              <div class="bg-[#FAFBFB] p-3 rounded-md border border-[#E1E3E5] space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-[#6D7175]">Google search query for German Shopify stores:</span>
+                  <button id="btn-copy-dork" class="text-xs font-medium text-[#005BD3] hover:underline">Copy Search Query</button>
+                </div>
+                <code id="dork-text" class="block text-xs font-mono text-[#202223]">site:.de "Powered by Shopify" "Impressum" "versand"</code>
+              </div>
+              <pre id="outreach-email" class="code-scroll text-xs font-mono text-[#202223] bg-[#FAFBFB] p-3.5 rounded-md border border-[#E1E3E5] overflow-x-auto whitespace-pre-wrap leading-relaxed">Subject: Quick question about [Store Name]'s LUCID / VerpackDG packaging report
+
+Hi [Owner Name],
+
+I noticed [Store Name] runs on Shopify and ships in Germany/EU. Since Shopify's native weight field only tracks product weight—not empty carton cardboard (PPK) and plastic mailer/tape weight—most merchants still calculate their annual LUCID and France Citeo kilogram totals manually in Excel.
+
+I built a lightweight tool (PackEPR) that maps your box presets to your Shopify orders and exports the exact upload-ready Germany LUCID XML and France Citeo CSV in one click.
+
+You can test your orders CSV on our live web calculator right now for free, and I'm giving our first 10 EU Shopify merchants a free lifetime Pro license in exchange for honest feedback. Want me to send over the link?</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 4. UNIVERSAL MODAL SYSTEM                  -->
+  <!-- ========================================== -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4">
+    
+    <!-- Modal 1: Install / Connect Store Form -->
+    <div id="modal-install" class="modal-box polaris-card bg-white max-w-md w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-[#008060] flex items-center justify-center text-white">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5L12 3 4.5 7.5v9L12 21l7.5-4.5v-9z"/></svg>
+          </div>
+          <h3 class="text-base font-bold text-[#202223]">Connect Your Shopify Store</h3>
+        </div>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+
+      <p class="text-xs text-[#6D7175] leading-relaxed">
+        Enter your Shopify store URL to connect PackEPR. We sync fulfilled order destination markets and match your box presets automatically.
+      </p>
+
+      <form id="modal-install-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store Domain</label>
+          <div class="relative">
+            <input id="install-shop-domain" type="text" placeholder="your-brand.myshopify.com" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm font-mono" />
+          </div>
+          <span class="text-[10px] text-[#6D7175] mt-1 block">e.g. nordic-atelier-de.myshopify.com</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Merchant Contact Email</label>
+          <input id="install-email" type="email" placeholder="compliance@yourbrand.de" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Selected Compliance Plan</label>
+          <select id="install-plan" class="polaris-input w-full px-3 py-2 text-xs sm:text-sm">
+            <option value="free">Free Audit Plan (€0/mo)</option>
+            <option value="starter" selected>Starter Plan — Germany &amp; France (€14/mo)</option>
+            <option value="pro">EU PPWR Pro — All 27 EU States (€39/mo)</option>
+          </select>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" id="btn-submit-install" class="polaris-btn-primary w-full py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+            <span>Authorize &amp; Launch PackEPR →</span>
+          </button>
+        </div>
+        <p class="text-[10px] text-center text-[#8C9196]">
+          14-day free trial on paid tiers. Cancel anytime in your Shopify Admin.
+        </p>
+      </form>
+    </div>
+
+    <!-- Modal 2: Merchant Sign In -->
+    <div id="modal-signin" class="modal-box polaris-card bg-white max-w-sm w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <h3 class="text-base font-bold text-[#202223]">Sign In to PackEPR</h3>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+
+      <form id="modal-signin-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store URL</label>
+          <input id="signin-shop" type="text" placeholder="store.myshopify.com" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Store Admin Email</label>
+          <input id="signin-email" type="email" placeholder="owner@store.com" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm" />
+        </div>
+        <div class="pt-2">
+          <button type="submit" class="polaris-btn-primary w-full py-2.5 text-xs sm:text-sm font-semibold">
+            Continue to Dashboard
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 3: Country Regulation Inspector -->
+    <div id="modal-country" class="modal-box polaris-card bg-white max-w-lg w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <div class="flex items-center gap-2">
+          <span id="country-modal-flag" class="text-2xl">🇩🇪</span>
+          <div>
+            <h3 id="country-modal-title" class="text-base font-bold text-[#202223]">Germany (DE) — VerpackDG &amp; LUCID</h3>
+            <span id="country-modal-subtitle" class="text-xs text-[#6D7175]">Zentrale Stelle Verpackungsregister</span>
+          </div>
+        </div>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs leading-relaxed text-[#202223]" id="country-modal-body">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="pt-3 border-t border-[#E1E3E5] flex items-center justify-between gap-3">
+        <span class="text-[11px] text-[#6D7175]">Tariff estimates verified Oct 2026</span>
+        <button id="btn-country-launch-calc" class="polaris-btn-primary px-3.5 py-1.5 text-xs font-semibold">
+          Test in Live Calculator →
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal 4: Privacy Policy -->
+    <div id="modal-privacy" class="modal-box polaris-card bg-white max-w-xl w-full p-6 space-y-4 hidden relative shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <h3 class="text-base font-bold text-[#202223]">Privacy Policy &amp; GDPR / DSGVO Compliance</h3>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+      <div class="text-xs text-[#4A4D50] space-y-3 leading-relaxed">
+        <p><strong>1. Data Minimisation Principle:</strong> PackEPR accesses strictly destination country codes and order creation timestamps to calculate country packaging mass. Customer names, personal phone numbers, and physical street addresses are NEVER permanently stored.</p>
+        <p><strong>2. In-Memory Aggregation:</strong> Order weights are aggregated in-memory to compute kilogram totals per member state. Raw transaction records are discarded post-ledger generation.</p>
+        <p><strong>3. Zero Third-Party Advertising:</strong> We never sell, rent, or monetize merchant order data. Your data is used exclusively to prepare ZSVR LUCID XML and Citeo CSV compliance filings.</p>
+        <p><strong>4. EU Data Sovereignty:</strong> Servers are hosted on ISO 27001 / SOC2 compliant infrastructure in Frankfurt, Germany.</p>
+      </div>
+    </div>
+
+    <!-- Modal 5: Terms of Service -->
+    <div id="modal-terms" class="modal-box polaris-card bg-white max-w-xl w-full p-6 space-y-4 hidden relative shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <h3 class="text-base font-bold text-[#202223]">Terms of Service</h3>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+      <div class="text-xs text-[#4A4D50] space-y-3 leading-relaxed">
+        <p><strong>1. Scope of Service:</strong> PackEPR provides tare weight calculation algorithms, box preset matching, and standardized XML/CSV generation for European Extended Producer Responsibility compliance.</p>
+        <p><strong>2. Accuracy of Tare Presets:</strong> The merchant is responsible for ensuring their configured empty carton, poly mailer, and tape tare weights reflect physical packaging used.</p>
+        <p><strong>3. Filing Responsibility:</strong> PackEPR generates compliant data files. The merchant is legally responsible for submitting these files to their respective national registers (e.g. LUCID, Citeo).</p>
+      </div>
+    </div>
+
+    <!-- Modal 6: Security -->
+    <div id="modal-security" class="modal-box polaris-card bg-white max-w-xl w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <h3 class="text-base font-bold text-[#202223]">Security &amp; API Scopes</h3>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+      <div class="text-xs text-[#4A4D50] space-y-3 leading-relaxed">
+        <div class="flex items-start gap-3 bg-[#FAFBFB] p-3 rounded border border-[#E1E3E5]">
+          <span class="text-lg">🔒</span>
+          <div>
+            <strong class="text-[#202223] block">Minimal Scopes: read_orders, read_products</strong>
+            <span>We never request write permissions to customer payments, payouts, or theme code.</span>
+          </div>
+        </div>
+        <p><strong>Encryption:</strong> All transit communication uses TLS 1.3 encryption. API tokens are stored with AES-256 GCM encryption.</p>
+        <p><strong>Shopify App Store Standard:</strong> Adheres to all Shopify App Review security directives and GDPR mandatory webhooks.</p>
+      </div>
+    </div>
+
+    <!-- Modal 7: Contact Support Form -->
+    <div id="modal-support" class="modal-box polaris-card bg-white max-w-md w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">💬</span>
+          <h3 class="text-base font-bold text-[#202223]">Contact Compliance Support</h3>
+        </div>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+
+      <p class="text-xs text-[#6D7175]">
+        Have questions about German LUCID, dual system contracts, or French Citeo IDU tariffs? Our European packaging specialists answer within 4 hours.
+      </p>
+
+      <form id="modal-support-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Your Name</label>
+          <input id="support-name" type="text" placeholder="Jan Meyer" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Work Email</label>
+          <input id="support-email" type="email" placeholder="jan@nordic-atelier.de" required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store URL (Optional)</label>
+          <input id="support-store" type="text" placeholder="nordic-atelier-de.myshopify.com" class="polaris-input w-full px-3 py-2 text-xs sm:text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1">How can we help?</label>
+          <textarea id="support-msg" rows="3" placeholder="I have 400 orders shipping into Germany and need to know which dual system operator to license with..." required class="polaris-input w-full px-3 py-2 text-xs sm:text-sm"></textarea>
+        </div>
+        <div class="pt-2">
+          <button type="submit" id="btn-submit-support" class="polaris-btn-primary w-full py-2.5 text-xs sm:text-sm font-semibold">
+            Send Inquiry to Compliance Team
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 5. JAVASCRIPT & STATE MANAGEMENT           -->
+  <!-- ========================================== -->
+  <script>
+    // -------------------------------------------------------------
+    // DATA & PRESETS
+    // -------------------------------------------------------------
+    const defaultPresets = [
+      { id: 'box-sm', name: 'DHL Kleinpaket Carton (S)', cardboard: 85, plastic: 4, other: 0 },
+      { id: 'box-md', name: 'Standard Fefco 0201 Carton (M)', cardboard: 165, plastic: 8, other: 0 },
+      { id: 'box-lg', name: 'Heavy Double-Wall Carton (L)', cardboard: 320, plastic: 15, other: 0 },
+      { id: 'poly-sm', name: 'LDPE Recycled Mailer Bag', cardboard: 5, plastic: 28, other: 0 },
+      { id: 'bottle-pk', name: 'Glass Bottle Protective Sleeve', cardboard: 140, plastic: 18, other: 45 }
+    ];
+
+    const defaultOrders = [
+      { id: '#DE-1081', date: '2026-10-02', country: 'DE', presetId: 'box-md' },
+      { id: '#DE-1082', date: '2026-10-03', country: 'DE', presetId: 'box-lg' },
+      { id: '#DE-1085', date: '2026-10-05', country: 'DE', presetId: 'box-sm' },
+      { id: '#FR-2041', date: '2026-10-06', country: 'FR', presetId: 'box-md' },
+      { id: '#FR-2044', date: '2026-10-08', country: 'FR', presetId: 'poly-sm' },
+      { id: '#AT-3012', date: '2026-10-09', country: 'AT', presetId: 'box-md' },
+      { id: '#IT-4019', date: '2026-10-11', country: 'IT', presetId: 'bottle-pk' },
+      { id: '#ES-5004', date: '2026-10-12', country: 'ES', presetId: 'box-sm' },
+      { id: '#DE-1090', date: '2026-10-14', country: 'DE', presetId: 'box-lg' },
+      { id: '#NL-6002', date: '2026-10-14', country: 'NL', presetId: 'poly-sm' }
+    ];
+
+    const countryMeta = {
+      DE: { name: 'Germany', authority: 'ZSVR LUCID (VerpackDG)', threshold: '0 kg (1st parcel)', baseFee: 39, flag: '🇩🇪', fullRules: 'Under German VerpackDG § 9, every commercial seller dispatching even 1 package into Germany must register with ZSVR LUCID and conclude a system participation contract with a licensed dual system (e.g. Lizenzero, Landbell). Missing registration results in automatic marketplace blocks on Amazon/Otto and administrative fines up to €200,000.' },
+      FR: { name: 'France', authority: 'Citeo / Adelphe (IDU)', threshold: '0 kg (€110 flat)', baseFee: 110, flag: '🇫🇷', fullRules: 'Under the French AGEC Law (Article L541-10), all businesses selling packaged consumer goods in France must hold a Unique Identification Number (IDU) registered with ADEME. For under 10,000 packaging units per year, Citeo applies a simplified flat tariff of €110/year.' },
+      AT: { name: 'Austria', authority: 'ARA Austria', threshold: '≤1,500 kg lump sum', baseFee: 90, flag: '🇦🇹', fullRules: 'Foreign online shops shipping to Austrian end-consumers must license packaging with a certified waste collection system (e.g. ARA). Stores dispatching under 1,500 kg of packaging annually qualify for simplified flat-fee declarations (~€90–€150/year).' },
+      IT: { name: 'Italy', authority: 'CONAI Consortium', threshold: 'Per tonne material', baseFee: 25, flag: '🇮🇹', fullRules: 'Legislative Decree 116/2020 requires mandatory environmental labeling on all primary and secondary packaging dispatches, and periodic environmental contributions (CAC) calculated per tonne based on material recyclability.' },
+      ES: { name: 'Spain', authority: 'MITECO Spain', threshold: '<15 tonnes simplified', baseFee: 45, flag: '🇪🇸', fullRules: 'Royal Decree 1055/2022 requires registration in the Product Producers Register (MITECO). Non-Spanish sellers must appoint an Authorized Representative in Spain before selling on Spanish marketplaces.' },
+      NL: { name: 'Netherlands', authority: 'Verpact NL', threshold: '50,000 kg threshold', baseFee: 0, flag: '🇳🇱', fullRules: 'The Netherlands maintains a general exemption for merchants producing under 50,000 kg of packaging annually. However, Single-Use Plastic (SUP) packaging components have a 0 kg threshold and must be declared regardless of volume.' }
+    };
+
+    // -------------------------------------------------------------
+    // TRANSLATIONS (DE | EN)
+    // -------------------------------------------------------------
+    const i18n = {
+      en: {
+        nav_features: 'Features',
+        nav_how: 'How it Works',
+        nav_regulations: 'EU Regulations',
+        nav_pricing: 'Pricing',
+        btn_open_calculator: 'Open Live App Calculator',
+        btn_back_landing: 'Back to Overview',
+        btn_signin: 'Sign In',
+        btn_install_shopify: 'Install on Shopify',
+        hero_badge: '✓ EU PPWR & VerpackDG Compliant — Since Aug 12, 2026',
+        hero_title: 'Your Shopify Store Ships Into Germany. Are You Filing The Right Packaging Weights?',
+        hero_sub: "Shopify tracks product weight for courier shipping rates — not the empty cardboard box, poly mailer, or bubble wrap that the EU counts for LUCID (Germany) and Citeo (France) compliance. PackEPR fixes this gap automatically.",
+        btn_hero_try: '+ Try Free on Shopify',
+        btn_hero_demo: 'See a Live Demo →',
+        trust_setup: '10-minute setup',
+        trust_nocode: 'No code required',
+        trust_plans: 'Works with all Shopify plans (Basic to Plus)',
+        proof_de_title: 'Germany Threshold',
+        proof_de_sub: 'Mandatory from 1st parcel',
+        proof_fine_title: 'Max Fine (VerpackDG)',
+        proof_fine_sub: '+ Sales bans on German marketplaces',
+        proof_ppwr_title: 'EU PPWR In Effect',
+        proof_ppwr_sub: 'Regulation (EU) 2025/40',
+        proof_prec_title: 'ZSVR 3-Decimal Precision',
+        proof_prec_sub: 'Audit-proof tare calculation',
+        problem_tag: 'The Shopify Compliance Gap',
+        problem_title: "Shopify's Weight Field Doesn't Track What the EU Regulates",
+        problem_desc: 'Standard ecommerce workflows calculate freight based on the product. But under EU law (VerpackDG & Citeo), every single gram of secondary packaging, infill paper, and tape counts as packaging waste subject to mandatory license fees and audit reporting.',
+        prob1_title: 'Shopify Weight ≠ Tare Weight',
+        prob1_desc: 'Shopify product weight is courier billing weight. EU law strictly requires declaring the empty shipping carton, mailer envelope, and adhesive tape tare weight separated by material fraction.',
+        prob2_title: 'Severe Administrative Fines',
+        prob2_desc: 'Germany fines up to €200,000 under VerpackDG with sales bans on Amazon.de and Otto. France fines up to €30,000 for missing IDU declarations.',
+        prob3_title: 'Schema-Certified XML Export',
+        prob3_desc: 'PackEPR generates exact ZSVR Schema 2.4 compliant XML. Every kilogram figure is calculated to 3 decimal places (0.000 kg) matching German dual system operator portals.',
+        how_tag: 'Simple 3-Step Workflow',
+        how_title: 'From First Order to Certified LUCID XML in 10 Minutes',
+        how_sub: 'Zero spreadsheet formulas. Zero manual weight weighing on every shipment.',
+        step1_title: 'Connect Shopify',
+        step1_desc: 'Authorize PackEPR with 1-click OAuth. We request strictly read_orders and read_products scope. We never alter your store catalog, checkouts, or pricing.',
+        step2_title: 'Assign Box Presets',
+        step2_desc: 'Weigh your empty cartons once (e.g. Small Carton = 120g Paper, 12g Tape). Set standard rules or let our heuristic match package presets to SKU dimensions.',
+        step3_title: 'Download LUCID XML & Citeo CSV',
+        step3_desc: 'Click export to generate the official German ZSVR XML file ready for drag-and-drop into the LUCID portal, and the exact Citeo declaration CSV for France.',
+        btn_test_csv: 'Test With Your CSV Now →',
+        feat_tag: 'Built Specifically for EU Compliance',
+        feat_title: 'Everything Required for Full Packaging EPR Compliance',
+        feat_sub: 'Engineered to satisfy the exact reporting standards of Germany’s Verpackungsregister and French ADEME.',
+        reg_tag: 'Country-by-Country Regulatory Guide',
+        reg_title: '2026 EU Packaging Obligations by Member State',
+        price_tag: 'Transparent Compliance Pricing',
+        price_title: 'Priced to Prevent €200,000 Fines for Any Store Size',
+        price_sub: 'No hidden transaction fees. All plans include automated EU destination sorting and weight aggregations.'
+      },
+      de: {
+        nav_features: 'Funktionen',
+        nav_how: 'Funktionsweise',
+        nav_regulations: 'EU-Verordnungen',
+        nav_pricing: 'Preise',
+        btn_open_calculator: 'Live-Rechner öffnen',
+        btn_back_landing: 'Zurück zur Übersicht',
+        btn_signin: 'Anmelden',
+        btn_install_shopify: 'In Shopify installieren',
+        hero_badge: '✓ EU PPWR & VerpackDG Konform — Seit 12. Aug 2026',
+        hero_title: 'Ihr Shopify Store versendet nach Deutschland. Melden Sie die richtigen Verpackungsgewichte?',
+        hero_sub: 'Shopify erfasst nur das Produktgewicht für Paketdienstleister — nicht aber den leeren Versandkarton, die Luftpolsterfolie oder das Klebeband, die für LUCID (VerpackDG) und Citeo (Frankreich) gemeldet werden müssen. PackEPR schließt diese Lücke automatisch.',
+        btn_hero_try: '+ Kostenlos in Shopify testen',
+        btn_hero_demo: 'Live-Demo ansehen →',
+        trust_setup: '10 Minuten Einrichtung',
+        trust_nocode: 'Kein Programmieren nötig',
+        trust_plans: 'Funktioniert mit allen Shopify-Tarifen',
+        proof_de_title: 'Deutschland-Freigrenze',
+        proof_de_sub: 'Meldepflicht ab dem 1. Paket',
+        proof_fine_title: 'Höchststrafe (VerpackDG)',
+        proof_fine_sub: '+ Verkaufsverbote auf Marktplätzen',
+        proof_ppwr_title: 'EU PPWR in Kraft',
+        proof_ppwr_sub: 'Verordnung (EU) 2025/40',
+        proof_prec_title: 'ZSVR 3-Dezimalstellen',
+        proof_prec_sub: 'Prüfsichere Tara-Berechnung',
+        problem_tag: 'Die Shopify-Compliance-Lücke',
+        problem_title: 'Das Shopify-Gewichtsfeld erfasst nicht, was die EU reguliert',
+        problem_desc: 'Standard-Workflows berechnen Fracht nach dem Produkt. Doch nach VerpackDG & Citeo zählt jedes einzelne Gramm Versandverpackung, Füllmaterial und Klebeband als lizenzpflichtiger Verpackungsabfall.',
+        prob1_title: 'Produktgewicht ≠ Tara-Gewicht',
+        prob1_desc: 'Shopify-Gewicht ist Frachtgewicht. Das Verpackungsgesetz verlangt exakt das Leergewicht von Kartonage, Versandtasche und Klebeband getrennt nach Materialfraktionen.',
+        prob2_title: 'Empfindliche Bußgelder',
+        prob2_desc: 'Deutschland verhängt Bußgelder bis zu 200.000 € nach dem Verpackungsgesetz inklusive Vertriebsverbot auf Amazon.de & Otto. Frankreich ahndet Verstöße mit bis zu 30.000 €.',
+        prob3_title: 'Schema-Geprüfter XML-Export',
+        prob3_desc: 'PackEPR erzeugt exakte ZSVR Schema 2.4 XML-Dateien. Alle Mengenangaben werden auf 3 Nachkommastellen (0,000 kg) für duale Systeme berechnet.',
+        how_tag: 'Einfacher 3-Schritte-Workflow',
+        how_title: 'In 10 Minuten von der ersten Bestellung zur fertigen LUCID XML',
+        how_sub: 'Keine Excel-Formeln. Kein manuelles Nachwiegen bei jedem einzelnen Versand.',
+        step1_title: 'Shopify verknüpfen',
+        step1_desc: 'PackEPR mit 1 Klick autorisieren. Wir fordern ausschließlich Lesezugriff auf Bestellungen und Produkte an.',
+        step2_title: 'Karton-Presets zuweisen',
+        step2_desc: 'Versandkartons einmalig wiegen (z.B. Kleinpaket = 120g PPK, 12g Band). PackEPR multipliziert die Gewichte automatisch.',
+        step3_title: 'LUCID XML & Citeo CSV herunterladen',
+        step3_desc: 'Offizielle ZSVR XML-Datei für das LUCID-Portal und CSV für Frankreich mit einem Klick exportieren.',
+        btn_test_csv: 'Jetzt mit eigener CSV testen →',
+        feat_tag: 'Speziell für EU-Compliance entwickelt',
+        feat_title: 'Alles für eine lückenlose EPR-Verpackungsmeldung',
+        feat_sub: 'Exakt auf die Vorgaben des Verpackungsregisters und der französischen ADEME abgestimmt.',
+        reg_tag: 'Länderbezogener Leitfaden',
+        reg_title: 'EU-Verpackungspflichten 2026 nach Mitgliedsstaat',
+        price_tag: 'Transparente Tarife',
+        price_title: 'Schutz vor 200.000 € Bußgeldern für jede Shop-Größe',
+        price_sub: 'Keine versteckten Transaktionsgebühren. Automatische EU-Länderzuordnung in allen Tarifen enthalten.'
+      }
+    };
+
+    let currentLang = localStorage.getItem('packepr_lang') || 'en';
+    let isAppMode = false;
+    let presets = JSON.parse(JSON.stringify(defaultPresets));
+    let orders = JSON.parse(JSON.stringify(defaultOrders));
+    let weightChart = null;
+
+    // -------------------------------------------------------------
+    // UI TOAST & COPY HELPERS
+    // -------------------------------------------------------------
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2800);
+    }
+
+    function copyText(text, label) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(label + ' copied')).catch(() => fallbackCopy(text, label));
+      } else {
+        fallbackCopy(text, label);
+      }
+    }
+
+    function fallbackCopy(text, label) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast(label + ' copied'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    function downloadFile(filename, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Exported ' + filename);
+    }
+
+    // -------------------------------------------------------------
+    // DUAL MODE SWITCHER (Landing Page <-> Interactive Calculator)
+    // -------------------------------------------------------------
+    function switchMode(toApp) {
+      isAppMode = !!toApp;
+      const landing = document.getElementById('landing-page-wrapper');
+      const app = document.getElementById('app-workspace-wrapper');
+      const landingNav = document.getElementById('landing-nav-links');
+      const toggleBtnText = document.getElementById('toggle-mode-text');
+
+      if (isAppMode) {
+        landing.classList.add('hidden');
+        app.classList.remove('hidden');
+        landingNav.classList.add('hidden');
+        toggleBtnText.textContent = i18n[currentLang].btn_back_landing;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Update URL to /app or hash
+        try {
+          if (window.location.pathname !== '/app' && !window.location.hash.includes('app')) {
+            window.history.pushState({ mode: 'app' }, '', '/app');
+          }
+        } catch (e) {}
+        renderAll();
+      } else {
+        landing.classList.remove('hidden');
+        app.classList.add('hidden');
+        landingNav.classList.remove('hidden');
+        toggleBtnText.textContent = i18n[currentLang].btn_open_calculator;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+          if (window.location.pathname === '/app') {
+            window.history.pushState({ mode: 'landing' }, '', '/');
+          }
+        } catch (e) {}
+      }
+    }
+
+    // -------------------------------------------------------------
+    // LANGUAGE SWITCHER (DE | EN)
+    // -------------------------------------------------------------
+    function setLanguage(lang) {
+      currentLang = (lang === 'de') ? 'de' : 'en';
+      localStorage.setItem('packepr_lang', currentLang);
+      
+      const flag = document.getElementById('lang-flag');
+      const code = document.getElementById('lang-code');
+      if (currentLang === 'de') {
+        flag.textContent = '🇬🇧';
+        code.textContent = 'EN';
+      } else {
+        flag.textContent = '🇩🇪';
+        code.textContent = 'DE';
+      }
+
+      // Update data-i18n tags
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[currentLang] && i18n[currentLang][key]) {
+          el.innerHTML = i18n[currentLang][key];
+        }
+      });
+
+      // Update toggle mode button text according to current state
+      const toggleBtnText = document.getElementById('toggle-mode-text');
+      toggleBtnText.textContent = isAppMode ? i18n[currentLang].btn_back_landing : i18n[currentLang].btn_open_calculator;
+      showToast(currentLang === 'de' ? 'Sprache: Deutsch (VerpackDG)' : 'Language: English');
+    }
+
+    // -------------------------------------------------------------
+    // MODAL SYSTEM
+    // -------------------------------------------------------------
+    function openModal(modalId) {
+      document.getElementById('modal-backdrop').classList.remove('hidden');
+      document.querySelectorAll('.modal-box').forEach(b => b.classList.add('hidden'));
+      const target = document.getElementById(modalId);
+      if (target) target.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-backdrop').classList.add('hidden');
+      document.querySelectorAll('.modal-box').forEach(b => b.classList.add('hidden'));
+    }
+
+    function openInstallModal(plan) {
+      const planSelect = document.getElementById('install-plan');
+      if (planSelect && plan) {
+        planSelect.value = plan;
+      }
+      openModal('modal-install');
+    }
+
+    function openCountryModal(code) {
+      const meta = countryMeta[code] || countryMeta['DE'];
+      document.getElementById('country-modal-flag').textContent = meta.flag || '🇪🇺';
+      document.getElementById('country-modal-title').textContent = `${meta.name} (${code}) — Packaging Compliance`;
+      document.getElementById('country-modal-subtitle').textContent = meta.authority;
+      
+      document.getElementById('country-modal-body').innerHTML = `
+        <div class="grid grid-cols-2 gap-2 bg-[#FAFBFB] p-3 rounded border border-[#E1E3E5] text-xs">
+          <div>
+            <span class="text-[#6D7175] block text-[10px] uppercase font-semibold">Minimum Threshold</span>
+            <span class="font-bold text-[#202223] text-sm">${meta.threshold}</span>
+          </div>
+          <div>
+            <span class="text-[#6D7175] block text-[10px] uppercase font-semibold">Estimated Base Fee</span>
+            <span class="font-bold text-[#008060] text-sm">€${meta.baseFee}/year</span>
+          </div>
+        </div>
+        <div class="p-3 bg-white rounded border border-[#E1E3E5] space-y-1.5">
+          <span class="text-xs font-semibold text-[#202223] block">Legal &amp; System Participation Rules:</span>
+          <p class="text-[#4A4D50]">${meta.fullRules}</p>
+        </div>
+      `;
+
+      openModal('modal-country');
+    }
+
+    // -------------------------------------------------------------
+    // CALCULATOR & AGGREGATE CORE
+    // -------------------------------------------------------------
+    function getPreset(id) {
+      return presets.find(p => p.id === id) || presets[0] || { id: 'default', name: 'Standard Box', cardboard: 100, plastic: 5, other: 0 };
+    }
+
+    function computeAggregates() {
+      const byCountry = {};
+      let totalCardboardG = 0;
+      let totalPlasticG = 0;
+      let totalOtherG = 0;
+
+      orders.forEach(o => {
+        const p = getPreset(o.presetId);
+        if (!byCountry[o.country]) {
+          byCountry[o.country] = { count: 0, cardboardG: 0, plasticG: 0, otherG: 0 };
+        }
+        byCountry[o.country].count += 1;
+        byCountry[o.country].cardboardG += p.cardboard;
+        byCountry[o.country].plasticG += p.plastic;
+        byCountry[o.country].otherG += p.other;
+
+        totalCardboardG += p.cardboard;
+        totalPlasticG += p.plastic;
+        totalOtherG += p.other;
+      });
+
+      return { byCountry, totalCardboardG, totalPlasticG, totalOtherG };
+    }
+
+    function renderAll() {
+      const agg = computeAggregates();
+      const activeCountries = Object.keys(agg.byCountry);
+
+      document.getElementById('kpi-total-orders').textContent = orders.length;
+      document.getElementById('kpi-countries-count').textContent = 'Across ' + activeCountries.length + ' EU member states';
+      document.getElementById('kpi-cardboard-kg').textContent = (agg.totalCardboardG / 1000).toFixed(3) + ' kg';
+      document.getElementById('kpi-plastic-kg').textContent = (agg.totalPlasticG / 1000).toFixed(3) + ' kg';
+
+      let estFee = 0;
+      activeCountries.forEach(c => {
+        if (countryMeta[c]) estFee += countryMeta[c].baseFee;
+      });
+      document.getElementById('kpi-est-fee').textContent = '€' + estFee + '/yr';
+
+      // Presets Dropdown in Add Order Form
+      const presetSelect = document.getElementById('input-order-preset');
+      const currentVal = presetSelect.value;
+      presetSelect.innerHTML = presets.map(p => `<option value="${p.id}">${p.name} (${p.cardboard}g PPK / ${p.plastic}g Plastic)</option>`).join('');
+      if (currentVal && presets.some(p => p.id === currentVal)) presetSelect.value = currentVal;
+
+      // Country Summary Table
+      const countryOrder = ['DE', 'FR', 'AT', 'IT', 'ES', 'NL'];
+      const countryRows = countryOrder.map(code => {
+        const data = agg.byCountry[code] || { count: 0, cardboardG: 0, plasticG: 0, otherG: 0 };
+        const meta = countryMeta[code] || { name: code, authority: 'National EPR', threshold: 'Active' };
+        const statusBadge = data.count > 0
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FFF4E5] text-[#8A6116] border border-[#F5D6A7]">Report Due • ${meta.threshold}</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs text-[#6D7175] bg-[#F1F2F4]">No shipments</span>`;
+        return `
+          <tr class="hover:bg-[#FAFBFB]">
+            <td class="py-2.5 pl-4 pr-2">
+              <div class="font-medium text-[#202223]">${meta.name} (${code})</div>
+              <div class="text-xs text-[#6D7175]">${meta.authority}</div>
+            </td>
+            <td class="py-2.5 px-2 text-right font-mono text-[#202223]">${data.count}</td>
+            <td class="py-2.5 px-2 text-right font-mono text-[#202223]">${(data.cardboardG / 1000).toFixed(3)}</td>
+            <td class="py-2.5 px-2 text-right font-mono text-[#202223]">${(data.plasticG / 1000).toFixed(3)}</td>
+            <td class="py-2.5 pl-2 pr-4">${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('country-summary-tbody').innerHTML = countryRows;
+
+      // Orders Ledger Table
+      const ordersHtml = orders.map((o, idx) => {
+        const p = getPreset(o.presetId);
+        const options = presets.map(pr => `<option value="${pr.id}" ${pr.id === o.presetId ? 'selected' : ''}>${pr.name}</option>`).join('');
+        return `
+          <tr class="hover:bg-[#FAFBFB]">
+            <td class="py-2 pl-4 pr-2 font-mono font-medium text-[#005BD3]">${o.id}</td>
+            <td class="py-2 px-2 text-[#6D7175]">${o.date}</td>
+            <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-[#F1F2F4] text-[#202223] font-mono text-xs">${o.country}</span></td>
+            <td class="py-2 px-2">
+              <select data-order-idx="${idx}" class="order-preset-select polaris-input px-2 py-1 text-xs">
+                ${options}
+              </select>
+            </td>
+            <td class="py-2 px-2 text-right font-mono text-[#202223]">${p.cardboard}g</td>
+            <td class="py-2 px-2 text-right font-mono text-[#202223]">${p.plastic}g</td>
+            <td class="py-2 pl-2 pr-4 text-right">
+              <button data-remove-order="${idx}" class="remove-order-btn text-xs text-[#D82C0D] hover:underline">Remove</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('orders-tbody').innerHTML = ordersHtml;
+
+      // Event listeners on order selects and deletes
+      document.querySelectorAll('.order-preset-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-order-idx'), 10);
+          orders[idx].presetId = e.target.value;
+          renderAll();
+          showToast('Updated preset for ' + orders[idx].id);
+        });
+      });
+      document.querySelectorAll('.remove-order-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-remove-order'), 10);
+          orders.splice(idx, 1);
+          renderAll();
+          showToast('Order removed from ledger');
+        });
+      });
+
+      // Presets Grid
+      const presetsHtml = presets.map((p, idx) => `
+        <div class="border border-[#E1E3E5] bg-white rounded-lg p-4 flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <h4 class="font-semibold text-[#202223] text-sm">${p.name}</h4>
+              <span class="text-xs font-mono text-[#6D7175] bg-[#F1F2F4] px-1.5 py-0.5 rounded">${p.id}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+              <div class="bg-[#FAFBFB] p-2 rounded border border-[#E1E3E5]">
+                <div class="text-[11px] text-[#6D7175]">PPK Carton</div>
+                <div class="font-mono font-semibold text-[#202223] text-sm">${p.cardboard}g</div>
+              </div>
+              <div class="bg-[#FAFBFB] p-2 rounded border border-[#E1E3E5]">
+                <div class="text-[11px] text-[#6D7175]">Plastic/Tape</div>
+                <div class="font-mono font-semibold text-[#202223] text-sm">${p.plastic}g</div>
+              </div>
+              <div class="bg-[#FAFBFB] p-2 rounded border border-[#E1E3E5]">
+                <div class="text-[11px] text-[#6D7175]">Glass/Other</div>
+                <div class="font-mono font-semibold text-[#202223] text-sm">${p.other}g</div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-[#E1E3E5]">
+            <span class="text-xs text-[#6D7175]">Tare total: ${p.cardboard + p.plastic + p.other}g / unit</span>
+            ${presets.length > 1 ? `<button data-del-preset="${idx}" class="del-preset-btn text-xs text-[#D82C0D] hover:underline">Remove</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('presets-grid').innerHTML = presetsHtml;
+
+      document.querySelectorAll('.del-preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-del-preset'), 10);
+          presets.splice(idx, 1);
+          renderAll();
+          showToast('Preset deleted');
+        });
+      });
+
+      updateChart(agg.byCountry);
+      updateExports(agg);
+    }
+
+    function updateChart(byCountry) {
+      const labels = ['DE', 'FR', 'AT', 'IT', 'ES', 'NL'];
+      const cardboardData = labels.map(c => ((byCountry[c]?.cardboardG || 0) / 1000).toFixed(3));
+      const plasticData = labels.map(c => ((byCountry[c]?.plasticG || 0) / 1000).toFixed(3));
+
+      const ctx = document.getElementById('countryWeightChart');
+      if (!ctx) return;
+      if (weightChart) weightChart.destroy();
+      weightChart = new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Cardboard PPK (kg)', data: cardboardData, backgroundColor: '#008060', borderRadius: 4 },
+            { label: 'Plastics (kg)', data: plasticData, backgroundColor: '#6D7175', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#202223', font: { size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#6D7175' }, grid: { display: false } },
+            y: { ticks: { color: '#6D7175' }, grid: { color: '#E1E3E5' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function updateExports(agg) {
+      const lucidId = document.getElementById('cfg-lucid-id')?.value.trim() || 'DE5294810394812';
+      const systemOp = document.getElementById('cfg-system-op')?.value || 'INTERSEROH';
+      const citeoIdu = document.getElementById('cfg-citeo-idu')?.value.trim() || 'FR284910_01XXXX';
+      const period = document.getElementById('cfg-period')?.value || '2026-Y';
+
+      const deStats = agg.byCountry['DE'] || { count: 0, cardboardG: 0, plasticG: 0, otherG: 0 };
+      const deCardboardKg = (deStats.cardboardG / 1000).toFixed(3);
+      const dePlasticKg = (deStats.plasticG / 1000).toFixed(3);
+      const deOtherKg = (deStats.otherG / 1000).toFixed(3);
+
+      const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
+<Datenmeldung xmlns="https://lucid.verpackungsregister.org/schema/2026/VerpackDG">
+  <Kopfdaten>
+    <Registrierungsnummer>${lucidId}</Registrierungsnummer>
+    <Meldezeitraum>${period}</Meldezeitraum>
+    <SystembetreiberCode>${systemOp}</SystembetreiberCode>
+    <ErstelltAm>${new Date().toISOString().split('T')[0]}</ErstelltAm>
+    <Rechtsgrundlage>VerpackDG-PPWR-2026</Rechtsgrundlage>
+  </Kopfdaten>
+  <Verpackungsmengen SendungenGesamt="${deStats.count}">
+    <MaterialFraktion>
+      <FraktionCode>PPK</FraktionCode>
+      <Bezeichnung>Papier, Pappe, Karton</Bezeichnung>
+      <MasseKg>${deCardboardKg}</MasseKg>
+    </MaterialFraktion>
+    <MaterialFraktion>
+      <FraktionCode>KUNSTSTOFFE</FraktionCode>
+      <Bezeichnung>Kunststoffe (LDPE Versandtaschen, Klebeband)</Bezeichnung>
+      <MasseKg>${dePlasticKg}</MasseKg>
+    </MaterialFraktion>
+    <MaterialFraktion>
+      <FraktionCode>GLAS_SONSTIGE</FraktionCode>
+      <Bezeichnung>Glas und sonstige Schutzverpackung</Bezeichnung>
+      <MasseKg>${deOtherKg}</MasseKg>
+    </MaterialFraktion>
+  </Verpackungsmengen>
+</Datenmeldung>`;
+
+      const csvLines = [
+        'Country_Code,Registry_Authority,Merchant_Identifier,Period,Total_Shipments,Paper_Cardboard_KG,Plastics_KG,Glass_Other_KG'
+      ];
+      ['DE', 'FR', 'AT', 'IT', 'ES', 'NL'].forEach(c => {
+        const st = agg.byCountry[c] || { count: 0, cardboardG: 0, plasticG: 0, otherG: 0 };
+        const idUsed = c === 'DE' ? lucidId : (c === 'FR' ? citeoIdu : 'EU-PPWR-' + c);
+        csvLines.push(`${c},"${countryMeta[c].authority}",${idUsed},${period},${st.count},${(st.cardboardG / 1000).toFixed(3)},${(st.plasticG / 1000).toFixed(3)},${(st.otherG / 1000).toFixed(3)}`);
+      });
+
+      if (document.getElementById('xml-preview')) document.getElementById('xml-preview').textContent = xmlString;
+      if (document.getElementById('csv-preview')) document.getElementById('csv-preview').textContent = csvLines.join('\n');
+    }
+
+    // -------------------------------------------------------------
+    // INITIALIZATION & EVENT WIRING
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Check connected store in localStorage
+      const savedShop = localStorage.getItem('packepr_shop');
+      if (savedShop) {
+        document.getElementById('connected-store-label').textContent = savedShop;
+      }
+
+      // 2. Language Switcher Initialization
+      setLanguage(currentLang);
+      document.getElementById('lang-toggle-btn').addEventListener('click', () => {
+        setLanguage(currentLang === 'en' ? 'de' : 'en');
+      });
+
+      // 3. Routing check on load (/app or #app or ?mode=app)
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (path === '/app' || path.startsWith('/app/') || hash === '#app' || search.includes('mode=app')) {
+        switchMode(true);
+      } else {
+        switchMode(false);
+      }
+
+      // 4. Mode Switch Buttons
+      document.getElementById('btn-toggle-mode').addEventListener('click', () => {
+        switchMode(!isAppMode);
+      });
+      document.getElementById('btn-back-to-landing').addEventListener('click', () => {
+        switchMode(false);
+      });
+      document.getElementById('nav-logo-home').addEventListener('click', (e) => {
+        if (isAppMode) {
+          e.preventDefault();
+          switchMode(false);
+        }
+      });
+      document.getElementById('btn-hero-live-demo').addEventListener('click', () => {
+        switchMode(true);
+      });
+      document.getElementById('btn-how-launch-calculator').addEventListener('click', () => {
+        switchMode(true);
+      });
+      document.getElementById('btn-country-launch-calc').addEventListener('click', () => {
+        closeModal();
+        switchMode(true);
+      });
+
+      // 5. Hero Card 1-Click File Downloads & Inspect
+      document.querySelectorAll('[data-hero-action]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const action = e.currentTarget.getAttribute('data-hero-action');
+          if (action === 'xml') {
+            const agg = computeAggregates();
+            updateExports(agg);
+            const content = document.getElementById('xml-preview').textContent;
+            downloadFile('LUCID_VerpackDG_2026_Report.xml', content, 'application/xml');
+          } else if (action === 'csv') {
+            const agg = computeAggregates();
+            updateExports(agg);
+            const content = document.getElementById('csv-preview').textContent;
+            downloadFile('Citeo_EU_PPWR_2026_Report.csv', content, 'text/csv');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-country-inspect]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const code = e.currentTarget.getAttribute('data-country-inspect');
+          openCountryModal(code);
+        });
+      });
+
+      // 6. Plan Select Buttons in Pricing
+      document.querySelectorAll('.plan-select-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const plan = e.currentTarget.getAttribute('data-plan') || 'starter';
+          openInstallModal(plan);
+        });
+      });
+      document.getElementById('btn-nav-install').addEventListener('click', () => {
+        openInstallModal('starter');
+      });
+      document.getElementById('btn-hero-try-shopify').addEventListener('click', () => {
+        openInstallModal('starter');
+      });
+
+      // 7. Modals: Sign In & Footer
+      document.getElementById('btn-nav-signin').addEventListener('click', () => openModal('modal-signin'));
+      document.getElementById('footer-btn-privacy').addEventListener('click', () => openModal('modal-privacy'));
+      document.getElementById('footer-btn-terms').addEventListener('click', () => openModal('modal-terms'));
+      document.getElementById('footer-btn-security').addEventListener('click', () => openModal('modal-security'));
+      document.getElementById('footer-btn-support').addEventListener('click', () => openModal('modal-support'));
+
+      document.querySelectorAll('.modal-close-btn').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+      });
+      document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('modal-backdrop')) closeModal();
+      });
+
+      // 8. Lead Capture Persistence: modal-install-form
+      document.getElementById('modal-install-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const shop = document.getElementById('install-shop-domain').value.trim();
+        const email = document.getElementById('install-email').value.trim();
+        const plan = document.getElementById('install-plan').value;
+
+        // Persist locally
+        localStorage.setItem('packepr_shop', shop);
+        document.getElementById('connected-store-label').textContent = shop;
+
+        const leadData = {
+          shop,
+          email,
+          plan,
+          source: 'modal-install',
+          timestamp: new Date().toISOString()
+        };
+
+        const existingLeads = JSON.parse(localStorage.getItem('packepr_leads') || '[]');
+        existingLeads.push(leadData);
+        localStorage.setItem('packepr_leads', JSON.stringify(existingLeads));
+
+        // Submit to API endpoint /api/leads
+        try {
+          await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(leadData)
+          });
+        } catch (err) {
+          console.warn('Offline or local preview mode: saved lead to localStorage');
+        }
+
+        closeModal();
+        showToast('Store connected! Welcome to PackEPR.');
+        switchMode(true);
+      });
+
+      // 9. Lead Capture Persistence: modal-support-form
+      document.getElementById('modal-support-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('support-name').value.trim();
+        const email = document.getElementById('support-email').value.trim();
+        const shop = document.getElementById('support-store').value.trim();
+        const message = document.getElementById('support-msg').value.trim();
+
+        const supportData = {
+          name,
+          email,
+          shop,
+          message,
+          source: 'modal-support',
+          timestamp: new Date().toISOString()
+        };
+
+        const existingInquiries = JSON.parse(localStorage.getItem('packepr_inquiries') || '[]');
+        existingInquiries.push(supportData);
+        localStorage.setItem('packepr_inquiries', JSON.stringify(existingInquiries));
+
+        try {
+          await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(supportData)
+          });
+        } catch (err) {
+          console.warn('Inquiry saved locally');
+        }
+
+        closeModal();
+        showToast('Inquiry received! We will reply within 4 hours.');
+      });
+
+      // 10. Sign-in form
+      document.getElementById('modal-signin-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const s = document.getElementById('signin-shop').value.trim();
+        if (s) {
+          localStorage.setItem('packepr_shop', s);
+          document.getElementById('connected-store-label').textContent = s;
+        }
+        closeModal();
+        showToast('Signed in successfully.');
+        switchMode(true);
+      });
+
+      // 11. Tab Switching in App Workspace (4 Tabs)
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-tab');
+          ['dashboard', 'presets', 'export', 'blueprint'].forEach(t => {
+            const view = document.getElementById('view-' + t);
+            if (view) view.classList.toggle('hidden', t !== target);
+            const b = document.getElementById('tab-btn-' + t);
+            if (b) {
+              if (t === target) {
+                b.className = 'tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium bg-[#F1F2F4] text-[#202223] border border-[#DCDDDF] transition';
+              } else {
+                b.className = 'tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition';
+              }
+            }
+          });
+        });
+      });
+
+      document.getElementById('btn-go-export').addEventListener('click', () => {
+        document.getElementById('tab-btn-export').click();
+      });
+
+      // 12. Manual Order Form Submit
+      document.getElementById('add-order-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('input-order-id').value.trim() || '#EU-999';
+        const date = document.getElementById('input-order-date').value;
+        const country = document.getElementById('input-order-country').value;
+        const presetId = document.getElementById('input-order-preset').value;
+        orders.unshift({ id, date, country, presetId });
+        document.getElementById('input-order-id').value = '#' + country + '-' + Math.floor(1000 + Math.random() * 9000);
+        renderAll();
+        showToast('Logged order ' + id);
+      });
+
+      // 13. Box Preset Form Submit
+      document.getElementById('add-preset-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('preset-name').value.trim();
+        const cardboard = parseInt(document.getElementById('preset-cardboard').value, 10) || 0;
+        const plastic = parseInt(document.getElementById('preset-plastic').value, 10) || 0;
+        const other = parseInt(document.getElementById('preset-other').value, 10) || 0;
+        const id = 'custom-' + Date.now().toString().slice(-4);
+        presets.push({ id, name, cardboard, plastic, other });
+        document.getElementById('preset-name').value = '';
+        renderAll();
+        showToast('Added preset: ' + name);
+      });
+
+      // 14. Load Sample Orders
+      document.getElementById('btn-load-sample').addEventListener('click', () => {
+        const extra = [
+          { id: '#DE-8821', date: '2026-10-15', country: 'DE', presetId: 'box-lg' },
+          { id: '#DE-8822', date: '2026-10-15', country: 'DE', presetId: 'box-md' },
+          { id: '#FR-8823', date: '2026-10-15', country: 'FR', presetId: 'box-md' },
+          { id: '#AT-8824', date: '2026-10-15', country: 'AT', presetId: 'box-sm' },
+          { id: '#IT-8825', date: '2026-10-15', country: 'IT', presetId: 'bottle-pk' },
+          { id: '#ES-8826', date: '2026-10-15', country: 'ES', presetId: 'poly-sm' }
+        ];
+        orders = [...extra, ...orders];
+        renderAll();
+        showToast('Appended 6 EU orders');
+      });
+
+      // 15. Clear Orders to Default
+      document.getElementById('btn-clear-orders').addEventListener('click', () => {
+        orders = JSON.parse(JSON.stringify(defaultOrders));
+        renderAll();
+        showToast('Ledger reset to defaults');
+      });
+
+      // 16. CSV Upload Parser
+      const countryCodeMap = {
+        'DE': 'DE', 'GERMANY': 'DE', 'DEUTSCHLAND': 'DE',
+        'FR': 'FR', 'FRANCE': 'FR',
+        'AT': 'AT', 'AUSTRIA': 'AT', 'ÖSTERREICH': 'AT', 'OESTERREICH': 'AT',
+        'IT': 'IT', 'ITALY': 'IT', 'ITALIA': 'IT',
+        'ES': 'ES', 'SPAIN': 'ES', 'ESPAÑA': 'ES', 'ESPANA': 'ES',
+        'NL': 'NL', 'NETHERLANDS': 'NL', 'NEDERLAND': 'NL', 'HOLLAND': 'NL',
+        'BE': 'BE', 'BELGIUM': 'BE',
+        'PL': 'PL', 'POLAND': 'PL',
+        'SE': 'SE', 'SWEDEN': 'SE'
+      };
+
+      function parseCSVLine(line) {
+        const result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (c === ',' && !inQuotes) {
+            result.push(cur.trim());
+            cur = '';
+          } else {
+            cur += c;
+          }
+        }
+        result.push(cur.trim());
+        return result;
+      }
+
+      document.getElementById('csv-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const lines = evt.target.result.split(/\r?\n/).filter(l => l.trim().length > 0);
+          if (lines.length < 2) {
+            showToast('CSV needs a header and at least 1 order row');
+            return;
+          }
+          const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, ''));
+          const idIdx = headers.findIndex(h => h === 'name' || h.includes('order') || h === 'id' || h.includes('number'));
+          const countryIdx = headers.findIndex(h => h.includes('shipping country') || h.includes('country'));
+          const dateIdx = headers.findIndex(h => h.includes('created') || h.includes('date') || h.includes('paid'));
+
+          const parsed = [];
+          for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            const rawCountry = (cols[countryIdx !== -1 ? countryIdx : 0] || 'DE').toUpperCase().replace(/[^A-Z]/g, '');
+            const matchedCode = countryCodeMap[rawCountry] || (rawCountry.length === 2 && countryMeta[rawCountry] ? rawCountry : 'DE');
+            const validCountry = countryMeta[matchedCode] ? matchedCode : 'DE';
+            parsed.push({
+              id: (idIdx !== -1 && cols[idIdx]) ? cols[idIdx] : ('#CSV-' + (1000 + i)),
+              date: (dateIdx !== -1 && cols[dateIdx] ? cols[dateIdx] : '2026-10-15').slice(0, 10),
+              country: validCountry,
+              presetId: presets[i % presets.length].id
+            });
+          }
+          if (parsed.length > 0) {
+            orders = parsed;
+            renderAll();
+            showToast('Imported ' + parsed.length + ' orders from CSV');
+          }
+          e.target.value = '';
+        };
+        reader.readAsText(file);
+      });
+
+      // 17. Exports Listeners & Downloads
+      document.querySelectorAll('.cfg-input').forEach(inp => {
+        inp.addEventListener('input', () => updateExports(computeAggregates()));
+        inp.addEventListener('change', () => updateExports(computeAggregates()));
+      });
+
+      document.getElementById('btn-download-xml').addEventListener('click', () => {
+        downloadFile('LUCID_VerpackDG_2026_Report.xml', document.getElementById('xml-preview').textContent, 'application/xml');
+      });
+      document.getElementById('btn-download-csv').addEventListener('click', () => {
+        downloadFile('Citeo_EU_PPWR_2026_Report.csv', document.getElementById('csv-preview').textContent, 'text/csv');
+      });
+      document.getElementById('btn-download-ppwr').addEventListener('click', () => {
+        const docText = `EU REGULATION (EU) 2025/40 (PPWR) — ARTICLE 10 & SUBSTANCE CONFORMITY DECLARATION\nDate: ${new Date().toISOString().split('T')[0]}\nGermany LUCID ID: ${document.getElementById('cfg-lucid-id').value}\nFrance Citeo IDU: ${document.getElementById('cfg-citeo-idu').value}\n\n1. Heavy Metals & PFAS Limit Compliance: All shipping cartons (PPK) and poly mailers comply with Article 5 substance restrictions effective August 12, 2026 (<100 mg/kg sum of lead, cadmium, mercury, hexavalent chromium; PFAS-free food-contact compliance).\n2. Excessive Packaging Minimisation (Article 10): Empty void space ratio verified across active Box Presets.\n3. National Producer Responsibility: Packaging weights logged and declared via PackEPR.`;
+        downloadFile('EU_PPWR_2026_Declaration_of_Conformity.txt', docText, 'text/plain');
+      });
+
+      document.getElementById('btn-copy-xml').addEventListener('click', () => {
+        copyText(document.getElementById('xml-preview').textContent, 'LUCID XML');
+      });
+      document.getElementById('btn-copy-csv').addEventListener('click', () => {
+        copyText(document.getElementById('csv-preview').textContent, 'Citeo CSV');
+      });
+
+      // 18. Tab 4 Blueprint Copy Buttons
+      document.getElementById('btn-copy-antigravity').addEventListener('click', () => {
+        copyText(document.getElementById('antigravity-prompt').textContent, 'Backend Prompt');
+      });
+      document.getElementById('btn-copy-email').addEventListener('click', () => {
+        copyText(document.getElementById('outreach-email').textContent, 'Outreach Email');
+      });
+      document.getElementById('btn-copy-dork').addEventListener('click', () => {
+        copyText(document.getElementById('dork-text').textContent, 'Google Dork');
+      });
+
+      // Initial Render
+      renderAll();
+    });
+  </script>
+</body>
+</html>

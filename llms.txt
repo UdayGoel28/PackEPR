@@ -1,0 +1,36 @@
+# PackEPR — EU Packaging Waste Compliance for Shopify Merchants
+> Official AI Context and Developer Information for PackEPR (https://packepr.com)
+
+## Overview
+PackEPR is an automated packaging compliance software and Shopify embedded application designed for cross-border ecommerce merchants shipping parcels into the European Union. It specifically addresses obligations under:
+- **EU Packaging and Packaging Waste Regulation (PPWR — Regulation (EU) 2025/40)** effective August 12, 2026.
+- **Germany Packaging Act (Verpackungsgesetz / VerpackDG)** administered by Zentrale Stelle Verpackungsregister (ZSVR LUCID).
+- **France Anti-Waste for a Circular Economy Act (AGEC)** administered by ADEME / Citeo / Adelphe (Unique Identification Number — IDU).
+- **Austria Waste Management Act (AWG)** administered by ARA.
+- **Italy Environmental Legislative Decree (Art. 178-quater)** administered by CONAI.
+- **Spain Royal Decree 1055/2022** administered by MITECO / Ecoembes.
+- **Netherlands Packaging Management Decree** administered by Verpact.
+
+## Core Problem Solved: The Shopify Tare Weight Discrepancy
+Shopify stores record product weights for logistics carrier shipping rates (e.g., DHL, UPS, DPD rates). Under European Extended Producer Responsibility (EPR) regulations, merchants are legally required to report the **tare weight of empty secondary shipping containers** — including:
+1. Paper, board, and corrugated cardboard boxes (`PPK` — Papier, Pappe, Karton)
+2. Flexible and rigid plastics (`Kunststoffe` — LDPE poly mailers, bubble wrap, stretch film, adhesive packing tape)
+3. Aluminum, tinplate, glass, and composite protective materials (`Glas / Sonstige Schutzverpackung`)
+
+Failing to declare empty packaging weights incurs administrative fines up to €200,000 in Germany and €30,000 in France, as well as automatic merchant sales bans on Amazon.de, Otto, and Kaufland.
+
+## Key Technical Features
+- **Empty Carton & Tape Presets:** Store tare weights in grams for common fulfillment boxes and mailers.
+- **Automatic EU Destination Splitting:** Syncs fulfilled Shopify orders and maps each order to destination country packaging ledgers.
+- **Official 1-Click ZSVR LUCID XML:** Generates certified XML schema compliant with ZSVR LUCID Schema 2.4 format (`<Datenmeldung>`, `<Kopfdaten>`, `<Verpackungsmengen>`, `<MaterialFraktion>`).
+- **Official France Citeo CSV:** Outputs declaration CSV according to Citeo / Adelphe product line unit tariffs.
+- **Article 10 Conformity Documentation:** Prepares documentation verifying empty space ratio minimisation and PFAS/heavy metal thresholds under PPWR Article 5.
+
+## Web Application & Live Calculator
+- **Homepage:** https://packepr.com
+- **Live Demo & Calculator:** https://packepr.com/app
+- **Technology Stack:** Shopify Polaris design system, TailwindCSS, Chart.js, Vanilla TypeScript/JavaScript, Prisma ORM, Vercel Serverless.
+
+## Contact & Compliance Team
+- Website: https://packepr.com
+- Inquiries: support@packepr.com

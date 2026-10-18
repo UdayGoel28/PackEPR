@@ -1,0 +1,19 @@
+{
+  "name": "packepr",
+  "version": "1.0.0",
+  "description": "EU Packaging Waste Compliance (PPWR & VerpackDG) for Shopify Merchants",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 3000"
+  },
+  "keywords": [
+    "shopify",
+    "epr",
+    "ppwr",
+    "lucid",
+    "verpackdg",
+    "citeo"
+  ],
+  "author": "Uday Goel",
+  "license": "MIT"
+}

@@ -1013,19 +1013,19 @@
           <span class="text-xs font-semibold text-[#202223]">EU Compliance Workspace &amp; Ledger</span>
         </div>
 
-        <!-- 4 Sub-Tabs -->
-        <nav class="flex items-center gap-1 overflow-x-auto py-0.5">
-          <button id="tab-btn-dashboard" data-tab="dashboard" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium bg-[#F1F2F4] text-[#202223] border border-[#DCDDDF] transition">
-            1. Orders &amp; EU Weight Audit
+        <!-- 3 Sub-Tabs (Cleanly Aligned Segmented Control) -->
+        <nav class="flex items-center gap-1.5 p-1 bg-[#F1F2F4] rounded-lg border border-[#E1E3E5] shadow-xs">
+          <button id="tab-btn-dashboard" data-tab="dashboard" class="tab-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold bg-white text-[#202223] border border-[#DCDDDF] shadow-xs transition flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full bg-[#008060] text-white text-[10px] flex items-center justify-center font-bold">1</span>
+            <span>Orders &amp; EU Weight Audit</span>
           </button>
-          <button id="tab-btn-presets" data-tab="presets" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
-            2. Box Weight Presets
+          <button id="tab-btn-presets" data-tab="presets" class="tab-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] hover:bg-white/60 border border-transparent transition flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full bg-[#E1E3E5] text-[#202223] text-[10px] flex items-center justify-center font-bold">2</span>
+            <span>Box Weight Presets</span>
           </button>
-          <button id="tab-btn-export" data-tab="export" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
-            3. LUCID XML &amp; Citeo Export
-          </button>
-          <button id="tab-btn-blueprint" data-tab="blueprint" class="tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition">
-            4. Antigravity Spec &amp; Sales Kit
+          <button id="tab-btn-export" data-tab="export" class="tab-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] hover:bg-white/60 border border-transparent transition flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full bg-[#E1E3E5] text-[#202223] text-[10px] flex items-center justify-center font-bold">3</span>
+            <span>LUCID XML &amp; Citeo Export</span>
           </button>
         </nav>
       </div>
@@ -1320,67 +1320,6 @@
         </div>
       </section>
 
-      <!-- TAB 4: DEVELOPER & OUTREACH BLUEPRINT -->
-      <section id="view-blueprint" class="hidden space-y-5">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div class="polaris-card p-5 space-y-3 flex flex-col">
-            <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
-              <div>
-                <h3 class="text-sm font-semibold text-[#202223]">Shopify Backend Spec (For Antigravity / Cursor)</h3>
-                <p class="text-xs text-[#6D7175]">Connects this UI to live Shopify Admin GraphQL &amp; Billing APIs</p>
-              </div>
-              <button id="btn-copy-antigravity" class="polaris-btn-secondary text-xs font-medium px-3 py-1.5 rounded-md">
-                Copy Prompt
-              </button>
-            </div>
-            <pre id="antigravity-prompt" class="code-scroll text-xs font-mono text-[#202223] bg-[#FAFBFB] p-3.5 rounded-md border border-[#E1E3E5] overflow-x-auto whitespace-pre-wrap flex-1 leading-relaxed">Build a Shopify Remix / Next.js embedded app named "PackEPR" using Shopify Polaris and Prisma (SQLite/Supabase):
-1. OAuth Scopes: read_orders, read_products, write_products.
-2. Database Models:
-   - BoxPreset (id, shop, name, cardboardGrams, plasticGrams, glassGrams, isDefault)
-   - MerchantConfig (shop, lucidNumber, dualSystemCode, citeoIdu, planTier)
-3. Order Sync Webhook &amp; GraphQL Query:
-   - Fetch orders filtered by created_at and shippingAddress.countryCodeV2 in ['DE','FR','AT','IT','ES','NL','PL','SE','BE'].
-   - Multiply order count by assigned BoxPreset material weights (convert grams to kg with 3 decimals).
-4. Export Endpoints:
-   - /api/export/lucid-xml: Output ZSVR LUCID compliant XML with &lt;Datenmeldung&gt;, &lt;Registrierungsnummer&gt;, &lt;Systembetreiber&gt;, and &lt;MaterialFraktion&gt; (PPK, KUNSTSTOFFE, GLAS).
-   - /api/export/citeo-csv: Output France Citeo / EU country summary CSV.
-5. Monetization (Shopify Billing API):
-   - Free Tier: Shows live country kg dashboard &amp; threshold warnings.
-   - Starter ($14/mo or $129/yr): Unlocks 1-click LUCID XML &amp; Citeo CSV downloads.</pre>
-          </div>
-
-          <div class="polaris-card p-5 space-y-3 flex flex-col justify-between">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
-                <div>
-                  <h3 class="text-sm font-semibold text-[#202223]">German "Impressum" Lead Search &amp; Cold Email</h3>
-                  <p class="text-xs text-[#6D7175]">Find direct founder emails on German Shopify stores for ₹0</p>
-                </div>
-                <button id="btn-copy-email" class="polaris-btn-primary text-xs font-medium px-3 py-1.5 rounded-md">
-                  Copy Outreach Email
-                </button>
-              </div>
-              <div class="bg-[#FAFBFB] p-3 rounded-md border border-[#E1E3E5] space-y-1.5">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-[#6D7175]">Google search query for German Shopify stores:</span>
-                  <button id="btn-copy-dork" class="text-xs font-medium text-[#005BD3] hover:underline">Copy Search Query</button>
-                </div>
-                <code id="dork-text" class="block text-xs font-mono text-[#202223]">site:.de "Powered by Shopify" "Impressum" "versand"</code>
-              </div>
-              <pre id="outreach-email" class="code-scroll text-xs font-mono text-[#202223] bg-[#FAFBFB] p-3.5 rounded-md border border-[#E1E3E5] overflow-x-auto whitespace-pre-wrap leading-relaxed">Subject: Quick question about [Store Name]'s LUCID / VerpackDG packaging report
-
-Hi [Owner Name],
-
-I noticed [Store Name] runs on Shopify and ships in Germany/EU. Since Shopify's native weight field only tracks product weight—not empty carton cardboard (PPK) and plastic mailer/tape weight—most merchants still calculate their annual LUCID and France Citeo kilogram totals manually in Excel.
-
-I built a lightweight tool (PackEPR) that maps your box presets to your Shopify orders and exports the exact upload-ready Germany LUCID XML and France Citeo CSV in one click.
-
-You can test your orders CSV on our live web calculator right now for free, and I'm giving our first 10 EU Shopify merchants a free lifetime Pro license in exchange for honest feedback. Want me to send over the link?</pre>
-            </div>
-          </div>
-        </div>
-      </section>
-
     </main>
   </div>
 
@@ -1520,11 +1459,11 @@ You can test your orders CSV on our live web calculator right now for free, and 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store URL</label>
-            <input id="checkout-shop-domain" type="text" required placeholder="store.myshopify.com" class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" />
+            <input id="checkout-shop-domain" type="text" required placeholder="yourbrand.myshopify.com" class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" />
           </div>
           <div>
             <label class="block text-xs font-medium text-[#202223] mb-1">Billing Email (Invoices)</label>
-            <input id="checkout-email" type="email" required placeholder="billing@store.de" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
+            <input id="checkout-email" type="email" required placeholder="finance@yourbrand.de" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
           </div>
         </div>
 
@@ -1552,25 +1491,29 @@ You can test your orders CSV on our live web calculator right now for free, and 
           </div>
 
           <!-- Card Form -->
-          <div id="payment-card-fields" class="space-y-2 p-3 rounded bg-[#FAFBFB] border border-[#E1E3E5]">
+          <div id="payment-card-fields" class="space-y-2.5 p-3.5 rounded-lg bg-[#FAFBFB] border border-[#E1E3E5]">
             <div>
-              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Card Number</label>
+              <label class="block text-[11px] font-medium text-[#202223] mb-1">Card Number</label>
               <div class="relative">
-                <input id="checkout-card-num" type="text" maxlength="19" placeholder="4242 •••• •••• 4242" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono tracking-wider" value="4242 4242 4242 4242" />
-                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6D7175] font-semibold">VISA</div>
+                <input id="checkout-card-num" type="text" maxlength="19" placeholder="•••• •••• •••• ••••" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono tracking-wider" autocomplete="cc-number" />
+                <div id="checkout-card-brand" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#6D7175] border border-[#E1E3E5] px-1.5 py-0.5 rounded bg-white">CARD</div>
               </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#202223] mb-1">Cardholder Name</label>
+              <input id="checkout-card-name" type="text" placeholder="Name as it appears on card" required class="polaris-input w-full px-2.5 py-1.5 text-xs" autocomplete="cc-name" />
             </div>
             <div class="grid grid-cols-3 gap-2">
               <div class="col-span-1">
-                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Expiry</label>
-                <input id="checkout-card-exp" type="text" maxlength="5" placeholder="MM/YY" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" value="12/28" />
+                <label class="block text-[11px] font-medium text-[#202223] mb-1">Expiry</label>
+                <input id="checkout-card-exp" type="text" maxlength="5" placeholder="MM / YY" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" autocomplete="cc-exp" />
               </div>
               <div class="col-span-1">
-                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">CVC</label>
-                <input id="checkout-card-cvc" type="text" maxlength="4" placeholder="123" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" value="888" />
+                <label class="block text-[11px] font-medium text-[#202223] mb-1">CVC / CVV</label>
+                <input id="checkout-card-cvc" type="password" maxlength="4" placeholder="CVC" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" autocomplete="cc-csc" />
               </div>
               <div class="col-span-1">
-                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Country</label>
+                <label class="block text-[11px] font-medium text-[#202223] mb-1">Billing Country</label>
                 <select id="checkout-card-country" class="polaris-input w-full px-2 py-1.5 text-xs">
                   <option value="DE">🇩🇪 Germany</option>
                   <option value="FR">🇫🇷 France</option>
@@ -1592,7 +1535,7 @@ You can test your orders CSV on our live web calculator right now for free, and 
             </div>
             <div>
               <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Account Holder Name</label>
-              <input id="checkout-sepa-name" type="text" placeholder="GmbH or Store Inhaber" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
+              <input id="checkout-sepa-name" type="text" placeholder="Company or Account Holder Name" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
             </div>
           </div>
         </div>
@@ -1975,10 +1918,9 @@ You can test your orders CSV on our live web calculator right now for free, and 
         landingNav.classList.add('hidden');
         toggleBtnText.textContent = i18n[currentLang].btn_back_landing;
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        // Update URL to /app or hash
         try {
-          if (window.location.pathname !== '/app' && !window.location.hash.includes('app')) {
-            window.history.pushState({ mode: 'app' }, '', '/app');
+          if (window.location.hash !== '#calculator') {
+            window.history.replaceState({ mode: 'app' }, '', '#calculator');
           }
         } catch (e) {}
         renderAll();
@@ -1989,8 +1931,8 @@ You can test your orders CSV on our live web calculator right now for free, and 
         toggleBtnText.textContent = i18n[currentLang].btn_open_calculator;
         window.scrollTo({ top: 0, behavior: 'smooth' });
         try {
-          if (window.location.pathname === '/app') {
-            window.history.pushState({ mode: 'landing' }, '', '/');
+          if (window.location.hash === '#calculator') {
+            window.history.replaceState({ mode: 'landing' }, '', window.location.pathname.replace(/\/app\/?$/, '') || '/');
           }
         } catch (e) {}
       }
@@ -2158,11 +2100,11 @@ You can test your orders CSV on our live web calculator right now for free, and 
       const savedShop = localStorage.getItem('packepr_shop') || document.getElementById('install-shop-domain')?.value;
       const savedEmail = localStorage.getItem('packepr_email') || document.getElementById('install-email')?.value;
 
-      if (shopInput && (!shopInput.value || shopInput.value === 'store.myshopify.com')) {
-        shopInput.value = savedShop || 'nordic-atelier-de.myshopify.com';
+      if (shopInput && (!shopInput.value || shopInput.value === 'store.myshopify.com' || shopInput.value === 'nordic-atelier-de.myshopify.com')) {
+        shopInput.value = savedShop || '';
       }
-      if (emailInput && (!emailInput.value || emailInput.value === 'billing@store.de')) {
-        emailInput.value = savedEmail || 'compliance@nordic-atelier.de';
+      if (emailInput && (!emailInput.value || emailInput.value === 'billing@store.de' || emailInput.value === 'compliance@nordic-atelier.de')) {
+        emailInput.value = savedEmail || '';
       }
 
       updatePaymentSummary();
@@ -2460,7 +2402,7 @@ You can test your orders CSV on our live web calculator right now for free, and 
         setLanguage(currentLang === 'en' ? 'de' : 'en');
       });
 
-      // 3. Routing & Payment return check on load (/app, /checkout, /payment, ?payment=success)
+      // 3. Routing & Payment return check on load: Landing Page is ALWAYS first
       const path = window.location.pathname;
       const hash = window.location.hash;
       const search = window.location.search;
@@ -2476,9 +2418,10 @@ You can test your orders CSV on our live web calculator right now for free, and 
       } else if (path === '/checkout' || path === '/payment' || search.includes('checkout') || search.includes('buy')) {
         switchMode(false);
         openPaymentModal('starter');
-      } else if (path === '/app' || path.startsWith('/app/') || hash === '#app' || search.includes('mode=app')) {
+      } else if (hash === '#calculator' || hash === '#app' || search.includes('mode=app')) {
         switchMode(true);
       } else {
+        // ALWAYS default to Landing Page first
         switchMode(false);
       }
 
@@ -2794,6 +2737,24 @@ You can test your orders CSV on our live web calculator right now for free, and 
             let v = e.target.value.replace(/\D/g, '').substring(0, 16);
             v = v.replace(/(.{4})/g, '$1 ').trim();
             e.target.value = v;
+
+            const brandBadge = document.getElementById('checkout-card-brand');
+            if (brandBadge) {
+              const raw = v.replace(/\s/g, '');
+              if (raw.startsWith('4')) {
+                brandBadge.textContent = 'VISA';
+                brandBadge.className = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#005BD3] border border-[#005BD3]/30 px-1.5 py-0.5 rounded bg-blue-50';
+              } else if (/^(5[1-5]|2[2-7])/.test(raw)) {
+                brandBadge.textContent = 'MC';
+                brandBadge.className = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#E53E3E] border border-[#E53E3E]/30 px-1.5 py-0.5 rounded bg-red-50';
+              } else if (/^3[47]/.test(raw)) {
+                brandBadge.textContent = 'AMEX';
+                brandBadge.className = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#008060] border border-[#008060]/30 px-1.5 py-0.5 rounded bg-emerald-50';
+              } else {
+                brandBadge.textContent = 'CARD';
+                brandBadge.className = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#6D7175] border border-[#E1E3E5] px-1.5 py-0.5 rounded bg-white';
+              }
+            }
           });
         }
 
@@ -2816,6 +2777,43 @@ You can test your orders CSV on our live web calculator right now for free, and 
           const deviceId = getDeviceFingerprint();
           const submitBtn = document.getElementById('btn-submit-payment-checkout');
           const originalText = submitBtn.innerHTML;
+
+          // Production Grade Validation: Ensure real payment details
+          const isCard = !document.getElementById('payment-card-fields')?.classList.contains('hidden');
+          if (isCard) {
+            const rawCard = (document.getElementById('checkout-card-num')?.value || '').replace(/\D/g, '');
+            const rawExp = (document.getElementById('checkout-card-exp')?.value || '').trim();
+            const rawCvc = (document.getElementById('checkout-card-cvc')?.value || '').trim();
+
+            if (rawCard.length < 15) {
+              showToast('⚠️ Please enter a complete 15 or 16-digit card number.');
+              document.getElementById('checkout-card-num')?.focus();
+              return;
+            }
+            if (!/^\d{2}\/\d{2}$/.test(rawExp)) {
+              showToast('⚠️ Please enter a valid expiry date (MM / YY).');
+              document.getElementById('checkout-card-exp')?.focus();
+              return;
+            }
+            const [expM, expY] = rawExp.split('/').map(n => parseInt(n, 10));
+            if (expM < 1 || expM > 12) {
+              showToast('⚠️ Invalid expiry month (01–12).');
+              document.getElementById('checkout-card-exp')?.focus();
+              return;
+            }
+            if (rawCvc.length < 3) {
+              showToast('⚠️ Please enter your 3 or 4-digit security code (CVC).');
+              document.getElementById('checkout-card-cvc')?.focus();
+              return;
+            }
+          } else {
+            const iban = (document.getElementById('checkout-sepa-iban')?.value || '').replace(/\s/g, '').toUpperCase();
+            if (iban.length < 15 || !/^[A-Z]{2}/.test(iban)) {
+              showToast('⚠️ Please enter a valid European IBAN.');
+              document.getElementById('checkout-sepa-iban')?.focus();
+              return;
+            }
+          }
 
           submitBtn.disabled = true;
           submitBtn.innerHTML = `<span><svg class="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Authorizing EU VAT Payment...</span>`;
@@ -2877,19 +2875,22 @@ You can test your orders CSV on our live web calculator right now for free, and 
         });
       }
 
-      // 11. Tab Switching in App Workspace (4 Tabs)
+      // 11. Tab Switching in App Workspace (3 Aligned Tabs)
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const target = btn.getAttribute('data-tab');
-          ['dashboard', 'presets', 'export', 'blueprint'].forEach(t => {
+          ['dashboard', 'presets', 'export'].forEach(t => {
             const view = document.getElementById('view-' + t);
             if (view) view.classList.toggle('hidden', t !== target);
             const b = document.getElementById('tab-btn-' + t);
             if (b) {
+              const badge = b.querySelector('span:first-child');
               if (t === target) {
-                b.className = 'tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium bg-[#F1F2F4] text-[#202223] border border-[#DCDDDF] transition';
+                b.className = 'tab-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold bg-white text-[#202223] border border-[#DCDDDF] shadow-xs transition flex items-center gap-1.5';
+                if (badge) badge.className = 'w-4 h-4 rounded-full bg-[#008060] text-white text-[10px] flex items-center justify-center font-bold';
               } else {
-                b.className = 'tab-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] border border-transparent transition';
+                b.className = 'tab-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium text-[#6D7175] hover:text-[#202223] hover:bg-white/60 border border-transparent transition flex items-center gap-1.5';
+                if (badge) badge.className = 'w-4 h-4 rounded-full bg-[#E1E3E5] text-[#202223] text-[10px] flex items-center justify-center font-bold';
               }
             }
           });
@@ -3039,9 +3040,9 @@ You can test your orders CSV on our live web calculator right now for free, and 
         downloadFile('LUCID_VerpackDG_2026_Report.xml', document.getElementById('xml-preview').textContent, 'application/xml');
       });
       document.getElementById('btn-download-csv').addEventListener('click', () => {
-        if (localStorage.getItem('packepr_trial_locked') === 'true') {
-          openInstallModal('starter');
-          showToast('🔒 Trial expired or already redeemed. Upgrade to Starter Plan (€14/mo) to download.');
+        if (localStorage.getItem('packepr_trial_locked') === 'true' && localStorage.getItem('packepr_payment_status') !== 'paid') {
+          openPaymentModal('starter');
+          showToast('🔒 Upgrade to Starter Plan (€14/mo) to download.');
           return;
         }
         downloadFile('Citeo_EU_PPWR_2026_Report.csv', document.getElementById('csv-preview').textContent, 'text/csv');
@@ -3056,17 +3057,6 @@ You can test your orders CSV on our live web calculator right now for free, and 
       });
       document.getElementById('btn-copy-csv').addEventListener('click', () => {
         copyText(document.getElementById('csv-preview').textContent, 'Citeo CSV');
-      });
-
-      // 18. Tab 4 Blueprint Copy Buttons
-      document.getElementById('btn-copy-antigravity').addEventListener('click', () => {
-        copyText(document.getElementById('antigravity-prompt').textContent, 'Backend Prompt');
-      });
-      document.getElementById('btn-copy-email').addEventListener('click', () => {
-        copyText(document.getElementById('outreach-email').textContent, 'Outreach Email');
-      });
-      document.getElementById('btn-copy-dork').addEventListener('click', () => {
-        copyText(document.getElementById('dork-text').textContent, 'Google Dork');
       });
 
       // Initial Render

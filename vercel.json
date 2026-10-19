@@ -19,11 +19,23 @@
       "destination": "/app/index.html"
     },
     {
+      "source": "/checkout",
+      "destination": "/checkout/index.html"
+    },
+    {
+      "source": "/payment",
+      "destination": "/payment/index.html"
+    },
+    {
+      "source": "/success",
+      "destination": "/success/index.html"
+    },
+    {
       "source": "/llms.txt",
       "destination": "/llms.txt"
     },
     {
-      "source": "/((?!api/|.*\\..*).*)",
+      "source": "/:match*",
       "destination": "/index.html"
     }
   ]

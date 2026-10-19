@@ -2,6 +2,14 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/webhook/payment",
+      "destination": "/api/webhook/payment.js"
+    },
+    {
+      "source": "/api/leads",
+      "destination": "/api/leads.js"
+    },
+    {
       "source": "/app",
       "destination": "/app/index.html"
     },

@@ -11,9 +11,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS & Chart.js -->
+  <!-- Tailwind CSS & Chart.js & Lemon Squeezy Payment Gateway -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
 
   <style>
     :root {
@@ -1431,6 +1432,13 @@ You can test your orders CSV on our live web calculator right now for free, and 
             <span>Authorize &amp; Launch PackEPR →</span>
           </button>
         </div>
+
+        <div id="checkout-instant-wrap" class="pt-1">
+          <button type="button" id="btn-modal-checkout" class="polaris-btn-secondary w-full py-2 text-xs font-semibold flex items-center justify-center gap-1.5 text-[#202223]">
+            <span>💳 Direct EU VAT Checkout (Paddle / Lemon Squeezy)</span>
+          </button>
+        </div>
+
         <p class="text-[10px] text-center text-[#8C9196]">
           14-day free trial on paid tiers. Cancel anytime in your Shopify Admin.
         </p>
@@ -1899,6 +1907,31 @@ You can test your orders CSV on our live web calculator right now for free, and 
       openModal('modal-install');
     }
 
+    // -------------------------------------------------------------
+    // PAYMENT GATEWAY CHECKOUT (LEMON SQUEEZY / PADDLE - MoR)
+    // -------------------------------------------------------------
+    window.PACKEPR_CHECKOUT = {
+      starter: 'https://packepr.lemonsqueezy.com/buy/starter-plan',
+      pro: 'https://packepr.lemonsqueezy.com/buy/pro-plan'
+    };
+
+    function launchCheckout(plan) {
+      const selectedPlan = plan || 'starter';
+      const shop = localStorage.getItem('packepr_shop') || document.getElementById('install-shop-domain')?.value || 'merchant-store.myshopify.com';
+      const email = document.getElementById('install-email')?.value || '';
+      const baseUrl = window.PACKEPR_CHECKOUT[selectedPlan] || window.PACKEPR_CHECKOUT.starter;
+      const checkoutUrl = `${baseUrl}?checkout[custom][shop]=${encodeURIComponent(shop)}&checkout[email]=${encodeURIComponent(email)}`;
+      
+      showToast('Opening secure EU VAT checkout...');
+      
+      // If Lemon Squeezy overlay SDK is loaded
+      if (window.LemonSqueezy && window.LemonSqueezy.Url) {
+        window.LemonSqueezy.Url.Open(checkoutUrl);
+      } else {
+        window.open(checkoutUrl, '_blank');
+      }
+    }
+
     function openCountryModal(code) {
       const meta = countryMeta[code] || countryMeta['DE'];
       document.getElementById('country-modal-flag').textContent = meta.flag || '🇪🇺';
@@ -2282,8 +2315,16 @@ You can test your orders CSV on our live web calculator right now for free, and 
       if (abuseUpgradeBtn) {
         abuseUpgradeBtn.addEventListener('click', () => {
           closeModal();
-          const pricingSec = document.getElementById('section-pricing');
-          if (pricingSec) pricingSec.scrollIntoView({ behavior: 'smooth' });
+          launchCheckout('starter');
+        });
+      }
+
+      const modalCheckoutBtn = document.getElementById('btn-modal-checkout');
+      if (modalCheckoutBtn) {
+        modalCheckoutBtn.addEventListener('click', () => {
+          const plan = document.getElementById('install-plan')?.value || 'starter';
+          closeModal();
+          launchCheckout(plan);
         });
       }
 

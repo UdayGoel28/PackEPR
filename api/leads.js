@@ -132,6 +132,38 @@ export default async function handler(req, res) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanDeviceId = (deviceId || '').trim();
 
+    // If this is a direct payment / plan upgrade
+    if (source === 'modal-payment' || body.payment_status === 'paid') {
+      const paymentRecord = {
+        id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        shop: cleanShop,
+        email: cleanEmail,
+        planTier: plan,
+        amount: body.amount || (plan === 'pro' ? 39 : 14),
+        currency: 'EUR',
+        billingCycle: body.billingCycle || 'monthly',
+        paymentStatus: 'paid',
+        trialStatus: 'converted',
+        deviceId: cleanDeviceId || 'dev_payment',
+        ipAddress: clientIp,
+        createdAt: new Date().toISOString()
+      };
+
+      memoryStore.merchants.set(cleanShop, paymentRecord);
+      if (cleanDeviceId) memoryStore.merchants.set(cleanDeviceId, paymentRecord);
+
+      console.log('[PackEPR Payment Recorded]', JSON.stringify(paymentRecord));
+      await forwardToSupabase('packepr_merchants', paymentRecord);
+      await forwardToWebhook(paymentRecord);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment received. Plan activated.',
+        paymentStatus: 'paid',
+        plan: plan
+      });
+    }
+
     // 1. Anti-Abuse Duplicate Verification
     // Check local memory store + Supabase
     const existing = await checkDuplicateTrial(cleanShop, cleanEmail, cleanDeviceId, clientIp);

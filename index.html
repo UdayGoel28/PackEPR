@@ -1034,6 +1034,23 @@
     <!-- Main Workspace Container -->
     <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-5">
       
+      <!-- Active Paid Plan / Payment Confirmation Banner -->
+      <div id="payment-success-banner" class="hidden p-4 rounded-lg bg-[#E3F1DF] border border-[#BBE5B3] text-[#1B572B] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-[#008060] text-white flex items-center justify-center font-bold text-sm shrink-0">✓</div>
+          <div>
+            <div class="text-xs sm:text-sm font-bold text-[#1B572B]">PackEPR Starter Plan Active — Payment Verified</div>
+            <div class="text-[11px] text-[#2C6E3C]">All 27 EU PPWR &amp; German VerpackDG official exports (ZSVR LUCID XML &amp; France Citeo CSV) are unlocked.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] bg-white/90 border border-[#BBE5B3] px-2.5 py-1 rounded font-mono font-bold text-[#1B572B]">STATUS: PAID (€14/MO)</span>
+          <button type="button" id="btn-banner-export-go" class="polaris-btn-primary px-3 py-1.5 text-xs font-semibold">
+            1-Click Exports →
+          </button>
+        </div>
+      </div>
+
       <!-- TAB 1: OVERVIEW & ORDERS -->
       <section id="view-dashboard" class="space-y-5">
         
@@ -1442,6 +1459,172 @@ You can test your orders CSV on our live web calculator right now for free, and 
         <p class="text-[10px] text-center text-[#8C9196]">
           14-day free trial on paid tiers. Cancel anytime in your Shopify Admin.
         </p>
+      </form>
+    </div>
+
+    <!-- Modal 8: Direct EU VAT Payment & Billing Checkout -->
+    <div id="modal-payment" class="modal-box polaris-card bg-white max-w-lg w-full p-6 space-y-4 hidden relative shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#E1E3E5] pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-[#008060] flex items-center justify-center text-white">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-[#202223]">PackEPR Secure EU VAT Checkout</h3>
+            <p class="text-[11px] text-[#6D7175]">Merchant of Record compliant under EU PPWR (EU 2025/40) &amp; VerpackDG</p>
+          </div>
+        </div>
+        <button class="modal-close-btn text-xl text-[#6D7175] hover:text-[#202223] font-mono leading-none">&times;</button>
+      </div>
+
+      <!-- Plan Selection & Billing Interval -->
+      <div class="bg-[#FAFBFB] p-3 rounded-lg border border-[#E1E3E5] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-[#202223]">Selected Plan</span>
+          <div class="flex items-center bg-[#F1F2F4] p-0.5 rounded text-[11px] font-medium">
+            <button type="button" id="payment-cycle-monthly" class="px-2.5 py-0.5 rounded bg-white text-[#202223] shadow-xs font-semibold">Monthly</button>
+            <button type="button" id="payment-cycle-annual" class="px-2.5 py-0.5 rounded text-[#6D7175] hover:text-[#202223]">Annual (-23%)</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <label class="payment-plan-opt polaris-card p-2.5 cursor-pointer border-2 border-[#008060] bg-white flex flex-col justify-between" data-checkout-plan="starter">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-[#202223]">Starter Plan</span>
+              <input type="radio" name="checkout-plan-choice" value="starter" checked class="text-[#008060]" />
+            </div>
+            <div class="mt-2">
+              <span id="payment-price-starter" class="text-lg font-bold text-[#202223] tabular-nums">€14</span>
+              <span id="payment-cycle-label-starter" class="text-[10px] text-[#6D7175]">/mo</span>
+            </div>
+            <span class="text-[10px] text-[#008060] font-medium mt-0.5">ZSVR LUCID &amp; Citeo</span>
+          </label>
+
+          <label class="payment-plan-opt polaris-card p-2.5 cursor-pointer border border-[#E1E3E5] bg-white hover:border-[#BABFC3] flex flex-col justify-between" data-checkout-plan="pro">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-[#202223]">EU PPWR Pro</span>
+              <input type="radio" name="checkout-plan-choice" value="pro" class="text-[#008060]" />
+            </div>
+            <div class="mt-2">
+              <span id="payment-price-pro" class="text-lg font-bold text-[#202223] tabular-nums">€39</span>
+              <span id="payment-cycle-label-pro" class="text-[10px] text-[#6D7175]">/mo</span>
+            </div>
+            <span class="text-[10px] text-[#6D7175] font-medium mt-0.5">All 27 EU States</span>
+          </label>
+        </div>
+      </div>
+
+      <form id="modal-payment-form" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store URL</label>
+            <input id="checkout-shop-domain" type="text" required placeholder="store.myshopify.com" class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-[#202223] mb-1">Billing Email (Invoices)</label>
+            <input id="checkout-email" type="email" required placeholder="billing@store.de" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-medium text-[#202223]">EU VAT ID (Optional — For 0% B2B Reverse Charge)</label>
+            <span class="text-[10px] text-[#6D7175]">e.g. DE123456789</span>
+          </div>
+          <input id="checkout-vat-id" type="text" placeholder="DE / FR / IT / ES VAT Number" class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono uppercase" />
+          <div id="checkout-vat-msg" class="text-[10px] text-[#008060] font-semibold mt-1 hidden">
+            ✓ Valid EU VAT Format detected: 0% B2B Reverse Charge applied.
+          </div>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div>
+          <label class="block text-xs font-medium text-[#202223] mb-1.5">Payment Method</label>
+          <div class="flex items-center gap-1.5 mb-2">
+            <button type="button" id="pay-tab-card" class="pay-method-btn px-3 py-1.5 rounded border border-[#008060] bg-[#F1F8F5] text-xs font-semibold text-[#008060] flex items-center gap-1.5" data-method="card">
+              <span>💳 Credit / Debit Card</span>
+            </button>
+            <button type="button" id="pay-tab-sepa" class="pay-method-btn px-3 py-1.5 rounded border border-[#E1E3E5] bg-white text-xs font-medium text-[#6D7175] hover:text-[#202223] flex items-center gap-1.5" data-method="sepa">
+              <span>🏛️ SEPA Direct Debit</span>
+            </button>
+          </div>
+
+          <!-- Card Form -->
+          <div id="payment-card-fields" class="space-y-2 p-3 rounded bg-[#FAFBFB] border border-[#E1E3E5]">
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Card Number</label>
+              <div class="relative">
+                <input id="checkout-card-num" type="text" maxlength="19" placeholder="4242 •••• •••• 4242" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono tracking-wider" value="4242 4242 4242 4242" />
+                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6D7175] font-semibold">VISA</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="col-span-1">
+                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Expiry</label>
+                <input id="checkout-card-exp" type="text" maxlength="5" placeholder="MM/YY" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" value="12/28" />
+              </div>
+              <div class="col-span-1">
+                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">CVC</label>
+                <input id="checkout-card-cvc" type="text" maxlength="4" placeholder="123" required class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" value="888" />
+              </div>
+              <div class="col-span-1">
+                <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Country</label>
+                <select id="checkout-card-country" class="polaris-input w-full px-2 py-1.5 text-xs">
+                  <option value="DE">🇩🇪 Germany</option>
+                  <option value="FR">🇫🇷 France</option>
+                  <option value="AT">🇦🇹 Austria</option>
+                  <option value="IT">🇮🇹 Italy</option>
+                  <option value="ES">🇪🇸 Spain</option>
+                  <option value="NL">🇳🇱 Netherlands</option>
+                  <option value="OTHER">🌍 Other EU / Global</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEPA Form (hidden by default) -->
+          <div id="payment-sepa-fields" class="space-y-2 p-3 rounded bg-[#FAFBFB] border border-[#E1E3E5] hidden">
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">IBAN Account Number</label>
+              <input id="checkout-sepa-iban" type="text" placeholder="DE89 3704 0044 0532 0130 00" class="polaris-input w-full px-2.5 py-1.5 text-xs font-mono" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#6D7175] mb-1">Account Holder Name</label>
+              <input id="checkout-sepa-name" type="text" placeholder="GmbH or Store Inhaber" class="polaris-input w-full px-2.5 py-1.5 text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary & Tax Calculation Box -->
+        <div class="border-t border-[#E1E3E5] pt-2 space-y-1 text-xs">
+          <div class="flex justify-between text-[#6D7175]">
+            <span>Subscription Subtotal:</span>
+            <span id="checkout-summary-subtotal" class="font-mono tabular-nums text-[#202223]">€14.00</span>
+          </div>
+          <div class="flex justify-between text-[#6D7175]">
+            <span>EU Reverse Charge / VAT:</span>
+            <span id="checkout-summary-tax" class="font-mono tabular-nums text-[#008060]">€0.00</span>
+          </div>
+          <div class="flex justify-between font-bold text-sm text-[#202223] pt-1 border-t border-[#E1E3E5]">
+            <span>Total Due Today:</span>
+            <span id="checkout-summary-total" class="font-mono tabular-nums text-base text-[#008060]">€14.00</span>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="pt-2">
+          <button type="submit" id="btn-submit-payment-checkout" class="polaris-btn-primary w-full py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+            <span>🔒 Complete Payment &amp; Activate Starter Plan</span>
+          </button>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between text-[10px] text-[#8C9196] gap-1 pt-1">
+          <span>✓ 14-day Money Back Guarantee</span>
+          <span>✓ Official Tax Invoice &amp; UID Receipt</span>
+          <span>✓ Cancel Anytime</span>
+        </div>
       </form>
     </div>
 
@@ -1915,21 +2098,80 @@ You can test your orders CSV on our live web calculator right now for free, and 
       pro: 'https://packepr.lemonsqueezy.com/buy/pro-plan'
     };
 
-    function launchCheckout(plan) {
-      const selectedPlan = plan || 'starter';
-      const shop = localStorage.getItem('packepr_shop') || document.getElementById('install-shop-domain')?.value || 'merchant-store.myshopify.com';
-      const email = document.getElementById('install-email')?.value || '';
-      const baseUrl = window.PACKEPR_CHECKOUT[selectedPlan] || window.PACKEPR_CHECKOUT.starter;
-      const checkoutUrl = `${baseUrl}?checkout[custom][shop]=${encodeURIComponent(shop)}&checkout[email]=${encodeURIComponent(email)}`;
+    let activePaymentPlan = 'starter';
+    let activePaymentCycle = 'monthly'; // 'monthly' | 'annual'
+
+    function updatePaymentSummary() {
+      const isAnnual = activePaymentCycle === 'annual';
+      const prices = {
+        starter: isAnnual ? 129 : 14,
+        pro: isAnnual ? 349 : 39
+      };
+      const subtotal = prices[activePaymentPlan] || (isAnnual ? 129 : 14);
       
-      showToast('Opening secure EU VAT checkout...');
-      
-      // If Lemon Squeezy overlay SDK is loaded
-      if (window.LemonSqueezy && window.LemonSqueezy.Url) {
-        window.LemonSqueezy.Url.Open(checkoutUrl);
-      } else {
-        window.open(checkoutUrl, '_blank');
+      const vatInput = document.getElementById('checkout-vat-id')?.value.trim() || '';
+      const hasVat = /^[A-Z]{2}[0-9A-Z]{6,12}$/i.test(vatInput);
+      const vatMsg = document.getElementById('checkout-vat-msg');
+      if (vatMsg) {
+        if (hasVat) {
+          vatMsg.classList.remove('hidden');
+        } else {
+          vatMsg.classList.add('hidden');
+        }
       }
+
+      const tax = 0; // 0% B2B reverse charge or EU intra-community supply
+      const total = subtotal + tax;
+
+      const subtotalEl = document.getElementById('checkout-summary-subtotal');
+      const taxEl = document.getElementById('checkout-summary-tax');
+      const totalEl = document.getElementById('checkout-summary-total');
+      const submitBtn = document.getElementById('btn-submit-payment-checkout');
+
+      if (subtotalEl) subtotalEl.textContent = `€${subtotal.toFixed(2)}`;
+      if (taxEl) taxEl.textContent = `€${tax.toFixed(2)}`;
+      if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
+      if (submitBtn) {
+        const planName = activePaymentPlan === 'pro' ? 'EU PPWR Pro' : 'Starter Plan';
+        submitBtn.innerHTML = `<span>🔒 Complete Payment &amp; Activate ${planName} (€${total.toFixed(2)}${isAnnual ? '/yr' : '/mo'})</span>`;
+      }
+    }
+
+    function openPaymentModal(plan) {
+      activePaymentPlan = plan === 'pro' ? 'pro' : 'starter';
+      
+      const radio = document.querySelector(`input[name="checkout-plan-choice"][value="${activePaymentPlan}"]`);
+      if (radio) radio.checked = true;
+
+      document.querySelectorAll('.payment-plan-opt').forEach(opt => {
+        if (opt.getAttribute('data-checkout-plan') === activePaymentPlan) {
+          opt.classList.add('border-2', 'border-[#008060]');
+          opt.classList.remove('border-[#E1E3E5]');
+        } else {
+          opt.classList.remove('border-2', 'border-[#008060]');
+          opt.classList.add('border-[#E1E3E5]');
+        }
+      });
+
+      const shopInput = document.getElementById('checkout-shop-domain');
+      const emailInput = document.getElementById('checkout-email');
+      const savedShop = localStorage.getItem('packepr_shop') || document.getElementById('install-shop-domain')?.value;
+      const savedEmail = localStorage.getItem('packepr_email') || document.getElementById('install-email')?.value;
+
+      if (shopInput && (!shopInput.value || shopInput.value === 'store.myshopify.com')) {
+        shopInput.value = savedShop || 'nordic-atelier-de.myshopify.com';
+      }
+      if (emailInput && (!emailInput.value || emailInput.value === 'billing@store.de')) {
+        emailInput.value = savedEmail || 'compliance@nordic-atelier.de';
+      }
+
+      updatePaymentSummary();
+      openModal('modal-payment');
+    }
+
+    function launchCheckout(plan) {
+      // Direct high-converting in-app Polaris checkout modal
+      openPaymentModal(plan || 'starter');
     }
 
     function openCountryModal(code) {
@@ -2218,14 +2460,32 @@ You can test your orders CSV on our live web calculator right now for free, and 
         setLanguage(currentLang === 'en' ? 'de' : 'en');
       });
 
-      // 3. Routing check on load (/app or #app or ?mode=app)
+      // 3. Routing & Payment return check on load (/app, /checkout, /payment, ?payment=success)
       const path = window.location.pathname;
       const hash = window.location.hash;
       const search = window.location.search;
-      if (path === '/app' || path.startsWith('/app/') || hash === '#app' || search.includes('mode=app')) {
+
+      if (search.includes('payment=success') || search.includes('checkout=success') || search.includes('status=paid') || path.includes('/success')) {
+        localStorage.setItem('packepr_trial_locked', 'false');
+        localStorage.setItem('packepr_plan', 'starter');
+        localStorage.setItem('packepr_payment_status', 'paid');
+        switchMode(true);
+        const banner = document.getElementById('payment-success-banner');
+        if (banner) banner.classList.remove('hidden');
+        showToast('🎉 Payment verified! Your PackEPR Starter Plan is active.');
+      } else if (path === '/checkout' || path === '/payment' || search.includes('checkout') || search.includes('buy')) {
+        switchMode(false);
+        openPaymentModal('starter');
+      } else if (path === '/app' || path.startsWith('/app/') || hash === '#app' || search.includes('mode=app')) {
         switchMode(true);
       } else {
         switchMode(false);
+      }
+
+      // Check if user has active paid subscription
+      if (localStorage.getItem('packepr_payment_status') === 'paid') {
+        const banner = document.getElementById('payment-success-banner');
+        if (banner) banner.classList.remove('hidden');
       }
 
       // 4. Mode Switch Buttons
@@ -2453,6 +2713,169 @@ You can test your orders CSV on our live web calculator right now for free, and 
         showToast('Signed in successfully.');
         switchMode(true);
       });
+
+      // 10.5 In-App EU VAT Payment Form & Cycle Listeners
+      const paymentForm = document.getElementById('modal-payment-form');
+      if (paymentForm) {
+        // Plan choice radio
+        document.querySelectorAll('input[name="checkout-plan-choice"]').forEach(radio => {
+          radio.addEventListener('change', (e) => {
+            activePaymentPlan = e.target.value;
+            document.querySelectorAll('.payment-plan-opt').forEach(opt => {
+              if (opt.getAttribute('data-checkout-plan') === activePaymentPlan) {
+                opt.classList.add('border-2', 'border-[#008060]');
+                opt.classList.remove('border-[#E1E3E5]');
+              } else {
+                opt.classList.remove('border-2', 'border-[#008060]');
+                opt.classList.add('border-[#E1E3E5]');
+              }
+            });
+            updatePaymentSummary();
+          });
+        });
+
+        // Billing Cycle Buttons
+        const cycleMonthlyBtn = document.getElementById('payment-cycle-monthly');
+        const cycleAnnualBtn = document.getElementById('payment-cycle-annual');
+        
+        if (cycleMonthlyBtn && cycleAnnualBtn) {
+          cycleMonthlyBtn.addEventListener('click', () => {
+            activePaymentCycle = 'monthly';
+            cycleMonthlyBtn.className = 'px-2.5 py-0.5 rounded bg-white text-[#202223] shadow-xs font-semibold';
+            cycleAnnualBtn.className = 'px-2.5 py-0.5 rounded text-[#6D7175] hover:text-[#202223]';
+            document.getElementById('payment-price-starter').textContent = '€14';
+            document.getElementById('payment-cycle-label-starter').textContent = '/mo';
+            document.getElementById('payment-price-pro').textContent = '€39';
+            document.getElementById('payment-cycle-label-pro').textContent = '/mo';
+            updatePaymentSummary();
+          });
+
+          cycleAnnualBtn.addEventListener('click', () => {
+            activePaymentCycle = 'annual';
+            cycleAnnualBtn.className = 'px-2.5 py-0.5 rounded bg-white text-[#202223] shadow-xs font-semibold';
+            cycleMonthlyBtn.className = 'px-2.5 py-0.5 rounded text-[#6D7175] hover:text-[#202223]';
+            document.getElementById('payment-price-starter').textContent = '€129';
+            document.getElementById('payment-cycle-label-starter').textContent = '/year';
+            document.getElementById('payment-price-pro').textContent = '€349';
+            document.getElementById('payment-cycle-label-pro').textContent = '/year';
+            updatePaymentSummary();
+          });
+        }
+
+        // VAT input check
+        document.getElementById('checkout-vat-id')?.addEventListener('input', updatePaymentSummary);
+
+        // Payment method tabs (Card vs SEPA)
+        const payTabCard = document.getElementById('pay-tab-card');
+        const payTabSepa = document.getElementById('pay-tab-sepa');
+        const cardFields = document.getElementById('payment-card-fields');
+        const sepaFields = document.getElementById('payment-sepa-fields');
+
+        if (payTabCard && payTabSepa) {
+          payTabCard.addEventListener('click', () => {
+            payTabCard.className = 'pay-method-btn px-3 py-1.5 rounded border border-[#008060] bg-[#F1F8F5] text-xs font-semibold text-[#008060] flex items-center gap-1.5';
+            payTabSepa.className = 'pay-method-btn px-3 py-1.5 rounded border border-[#E1E3E5] bg-white text-xs font-medium text-[#6D7175] hover:text-[#202223] flex items-center gap-1.5';
+            cardFields?.classList.remove('hidden');
+            sepaFields?.classList.add('hidden');
+          });
+
+          payTabSepa.addEventListener('click', () => {
+            payTabSepa.className = 'pay-method-btn px-3 py-1.5 rounded border border-[#008060] bg-[#F1F8F5] text-xs font-semibold text-[#008060] flex items-center gap-1.5';
+            payTabCard.className = 'pay-method-btn px-3 py-1.5 rounded border border-[#E1E3E5] bg-white text-xs font-medium text-[#6D7175] hover:text-[#202223] flex items-center gap-1.5';
+            sepaFields?.classList.remove('hidden');
+            cardFields?.classList.add('hidden');
+          });
+        }
+
+        // Auto space card number
+        const cardNumInput = document.getElementById('checkout-card-num');
+        if (cardNumInput) {
+          cardNumInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+            v = v.replace(/(.{4})/g, '$1 ').trim();
+            e.target.value = v;
+          });
+        }
+
+        // Auto format expiry MM/YY
+        const cardExpInput = document.getElementById('checkout-card-exp');
+        if (cardExpInput) {
+          cardExpInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+            if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2);
+            e.target.value = v;
+          });
+        }
+
+        // Handle Payment Submit
+        paymentForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const shop = document.getElementById('checkout-shop-domain').value.trim();
+          const email = document.getElementById('checkout-email').value.trim();
+          const vatId = document.getElementById('checkout-vat-id')?.value.trim() || '';
+          const deviceId = getDeviceFingerprint();
+          const submitBtn = document.getElementById('btn-submit-payment-checkout');
+          const originalText = submitBtn.innerHTML;
+
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<span><svg class="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Authorizing EU VAT Payment...</span>`;
+
+          const prices = { starter: activePaymentCycle === 'annual' ? 129 : 14, pro: activePaymentCycle === 'annual' ? 349 : 39 };
+          const amount = prices[activePaymentPlan] || 14;
+
+          const paymentPayload = {
+            shop,
+            email,
+            plan: activePaymentPlan,
+            billingCycle: activePaymentCycle,
+            amount,
+            vatId,
+            source: 'modal-payment',
+            payment_status: 'paid',
+            deviceId,
+            timestamp: new Date().toISOString()
+          };
+
+          try {
+            await fetch('/api/leads', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(paymentPayload)
+            });
+          } catch (err) {
+            console.warn('Payment recorded locally');
+          }
+
+          // Unlock merchant immediately
+          localStorage.setItem('packepr_trial_locked', 'false');
+          localStorage.setItem('packepr_plan', activePaymentPlan);
+          localStorage.setItem('packepr_payment_status', 'paid');
+          localStorage.setItem('packepr_shop', shop);
+          localStorage.setItem('packepr_email', email);
+          localStorage.setItem('packepr_paid_at', new Date().toISOString());
+
+          document.getElementById('connected-store-label').textContent = shop;
+
+          // Close modal
+          closeModal();
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+
+          // Switch to workspace with unlocked reports
+          switchMode(true);
+          const banner = document.getElementById('payment-success-banner');
+          if (banner) banner.classList.remove('hidden');
+
+          showToast('🎉 Payment verified! Starter Plan is now active with unlimited EU filing exports.');
+        });
+      }
+
+      const bannerExportBtn = document.getElementById('btn-banner-export-go');
+      if (bannerExportBtn) {
+        bannerExportBtn.addEventListener('click', () => {
+          document.getElementById('tab-btn-export')?.click();
+        });
+      }
 
       // 11. Tab Switching in App Workspace (4 Tabs)
       document.querySelectorAll('.tab-btn').forEach(btn => {

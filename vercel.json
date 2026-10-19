@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/webhook/payment",
@@ -20,6 +21,10 @@
     {
       "source": "/llms.txt",
       "destination": "/llms.txt"
+    },
+    {
+      "source": "/((?!api/|.*\\..*).*)",
+      "destination": "/index.html"
     }
   ]
 }

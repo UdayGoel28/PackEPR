@@ -1,6 +1,7 @@
 {
   "name": "packepr",
   "version": "1.0.0",
+  "type": "module",
   "description": "EU Packaging Waste Compliance (PPWR & VerpackDG) for Shopify Merchants",
   "main": "index.html",
   "scripts": {

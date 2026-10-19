@@ -1387,6 +1387,22 @@ You can test your orders CSV on our live web calculator right now for free, and 
         Enter your Shopify store URL to connect PackEPR. We sync fulfilled order destination markets and match your box presets automatically.
       </p>
 
+      <!-- 1-Time Trial Abuse Prevention Alert Banner -->
+      <div id="trial-abuse-banner" class="hidden p-3 rounded-lg bg-[#FFF4E5] border border-[#F5D6A7] text-xs space-y-1.5">
+        <div class="flex items-center gap-2 text-[#8A6116] font-semibold">
+          <span>⚠️ 1-Time Free Trial Already Redeemed</span>
+        </div>
+        <p id="trial-abuse-msg" class="text-[#8A6116] leading-relaxed text-[11px]">
+          This store domain or device has already activated its 14-day free trial. To maintain compliance and security, additional free trials cannot be issued for this device.
+        </p>
+        <div class="pt-1 flex items-center justify-between">
+          <span class="text-[10px] text-[#8A6116]">Need continued access?</span>
+          <button type="button" id="btn-abuse-upgrade" class="text-[11px] font-bold text-[#008060] hover:underline">
+            Upgrade to Starter (€14/mo) →
+          </button>
+        </div>
+      </div>
+
       <form id="modal-install-form" class="space-y-3">
         <div>
           <label class="block text-xs font-medium text-[#202223] mb-1">Shopify Store Domain</label>
@@ -1821,6 +1837,46 @@ You can test your orders CSV on our live web calculator right now for free, and 
     }
 
     // -------------------------------------------------------------
+    // DEVICE FINGERPRINTING & TRIAL ABUSE GUARD
+    // -------------------------------------------------------------
+    function getDeviceFingerprint() {
+      let deviceId = localStorage.getItem('packepr_device_id');
+      if (deviceId) return deviceId;
+
+      const screenData = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const navData = `${navigator.language}_${navigator.platform}_${navigator.hardwareConcurrency || 2}`;
+      
+      let canvasHash = 'c0';
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 30;
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#008060';
+        ctx.fillRect(0, 0, 160, 30);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('PackEPR-Lock-' + tz, 2, 2);
+        canvasHash = canvas.toDataURL().slice(-40);
+      } catch (e) {}
+
+      const raw = `${screenData}_${tz}_${navData}_${canvasHash}`;
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      deviceId = 'dev_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36).slice(-4);
+      try {
+        localStorage.setItem('packepr_device_id', deviceId);
+        document.cookie = `packepr_device_id=${deviceId}; path=/; max-age=31536000; SameSite=Lax`;
+      } catch (e) {}
+      return deviceId;
+    }
+
+    // -------------------------------------------------------------
     // MODAL SYSTEM
     // -------------------------------------------------------------
     function openModal(modalId) {
@@ -2166,6 +2222,11 @@ You can test your orders CSV on our live web calculator right now for free, and 
       // 5. Hero Card 1-Click File Downloads & Inspect
       document.querySelectorAll('[data-hero-action]').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          if (localStorage.getItem('packepr_trial_locked') === 'true') {
+            openInstallModal('starter');
+            showToast('🔒 Trial expired or already redeemed. Upgrade to download.');
+            return;
+          }
           const action = e.currentTarget.getAttribute('data-hero-action');
           if (action === 'xml') {
             const agg = computeAggregates();
@@ -2216,43 +2277,90 @@ You can test your orders CSV on our live web calculator right now for free, and 
         if (e.target === document.getElementById('modal-backdrop')) closeModal();
       });
 
-      // 8. Lead Capture Persistence: modal-install-form
+      // 8. Lead Capture Persistence & 1-Time Trial Abuse Guard: modal-install-form
+      const abuseUpgradeBtn = document.getElementById('btn-abuse-upgrade');
+      if (abuseUpgradeBtn) {
+        abuseUpgradeBtn.addEventListener('click', () => {
+          closeModal();
+          const pricingSec = document.getElementById('section-pricing');
+          if (pricingSec) pricingSec.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
+
       document.getElementById('modal-install-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const shop = document.getElementById('install-shop-domain').value.trim();
         const email = document.getElementById('install-email').value.trim();
         const plan = document.getElementById('install-plan').value;
+        const deviceId = getDeviceFingerprint();
 
-        // Persist locally
-        localStorage.setItem('packepr_shop', shop);
-        document.getElementById('connected-store-label').textContent = shop;
+        const submitBtn = document.getElementById('btn-submit-install');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Verifying Store &amp; Eligibility...</span>`;
 
         const leadData = {
           shop,
           email,
           plan,
           source: 'modal-install',
+          deviceId,
           timestamp: new Date().toISOString()
         };
 
-        const existingLeads = JSON.parse(localStorage.getItem('packepr_leads') || '[]');
-        existingLeads.push(leadData);
-        localStorage.setItem('packepr_leads', JSON.stringify(existingLeads));
-
-        // Submit to API endpoint /api/leads
         try {
-          await fetch('/api/leads', {
+          const resp = await fetch('/api/leads', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(leadData)
           });
-        } catch (err) {
-          console.warn('Offline or local preview mode: saved lead to localStorage');
-        }
+          const result = await resp.json();
 
-        closeModal();
-        showToast('Store connected! Welcome to PackEPR.');
-        switchMode(true);
+          if (result && result.isDuplicate) {
+            // Abuse Guard Triggered!
+            localStorage.setItem('packepr_trial_locked', 'true');
+            const abuseBanner = document.getElementById('trial-abuse-banner');
+            const abuseMsg = document.getElementById('trial-abuse-msg');
+            if (abuseMsg) {
+              abuseMsg.textContent = result.message || 'This store or device has already redeemed a 14-day free trial.';
+            }
+            if (abuseBanner) abuseBanner.classList.remove('hidden');
+            showToast('⚠️ 1-Time Free Trial already redeemed for this store or device.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Upgrade to Continue (€14/mo) →</span>`;
+            submitBtn.onclick = (ev) => {
+              ev.preventDefault();
+              document.getElementById('install-plan').value = 'starter';
+              closeModal();
+              const pSec = document.getElementById('section-pricing');
+              if (pSec) pSec.scrollIntoView({ behavior: 'smooth' });
+            };
+            return;
+          } else {
+            // Valid First-Time Trial
+            localStorage.setItem('packepr_trial_locked', 'false');
+            localStorage.setItem('packepr_shop', shop);
+            document.getElementById('connected-store-label').textContent = shop;
+
+            const existingLeads = JSON.parse(localStorage.getItem('packepr_leads') || '[]');
+            existingLeads.push(leadData);
+            localStorage.setItem('packepr_leads', JSON.stringify(existingLeads));
+
+            closeModal();
+            showToast('✓ 14-Day Free Trial activated! Welcome to PackEPR.');
+            switchMode(true);
+          }
+        } catch (err) {
+          console.warn('Network offline or local preview fallback', err);
+          localStorage.setItem('packepr_shop', shop);
+          document.getElementById('connected-store-label').textContent = shop;
+          closeModal();
+          showToast('Store connected! Welcome to PackEPR.');
+          switchMode(true);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       });
 
       // 9. Lead Capture Persistence: modal-support-form
@@ -2262,12 +2370,14 @@ You can test your orders CSV on our live web calculator right now for free, and 
         const email = document.getElementById('support-email').value.trim();
         const shop = document.getElementById('support-store').value.trim();
         const message = document.getElementById('support-msg').value.trim();
+        const deviceId = getDeviceFingerprint();
 
         const supportData = {
           name,
           email,
           shop,
           message,
+          deviceId,
           source: 'modal-support',
           timestamp: new Date().toISOString()
         };
@@ -2457,9 +2567,19 @@ You can test your orders CSV on our live web calculator right now for free, and 
       });
 
       document.getElementById('btn-download-xml').addEventListener('click', () => {
+        if (localStorage.getItem('packepr_trial_locked') === 'true') {
+          openInstallModal('starter');
+          showToast('🔒 Trial expired or already redeemed. Upgrade to Starter Plan (€14/mo) to download.');
+          return;
+        }
         downloadFile('LUCID_VerpackDG_2026_Report.xml', document.getElementById('xml-preview').textContent, 'application/xml');
       });
       document.getElementById('btn-download-csv').addEventListener('click', () => {
+        if (localStorage.getItem('packepr_trial_locked') === 'true') {
+          openInstallModal('starter');
+          showToast('🔒 Trial expired or already redeemed. Upgrade to Starter Plan (€14/mo) to download.');
+          return;
+        }
         downloadFile('Citeo_EU_PPWR_2026_Report.csv', document.getElementById('csv-preview').textContent, 'text/csv');
       });
       document.getElementById('btn-download-ppwr').addEventListener('click', () => {
